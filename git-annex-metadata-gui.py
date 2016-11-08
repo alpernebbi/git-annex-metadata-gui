@@ -30,5 +30,7 @@ class MainWindow(QMainWindow):
         self.file_menu = self.menuBar().addMenu('&File')
         self.file_menu.addAction(self.exit_action)
 
+        self.statusBar().showMessage('Ready')
+
 if __name__ == '__main__':
     main()
