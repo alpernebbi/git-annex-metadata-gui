@@ -7,6 +7,7 @@ from PyQt5.QtWidgets import QMainWindow
 from PyQt5.QtWidgets import QAction
 from PyQt5.QtWidgets import QFileSystemModel
 from PyQt5.QtWidgets import QTreeView
+from PyQt5.QtWidgets import QFileDialog
 
 
 def main():
@@ -29,6 +30,13 @@ class MainWindow(QMainWindow):
         self.create_statusbar()
 
     def create_actions(self):
+        self.open_action = QAction(
+            "Open...", self,
+            shortcut="Ctrl+O",
+            statusTip="Open an existing directory",
+            triggered=self.open_directory
+        )
+
         self.exit_action = QAction(
             "Exit", self,
             shortcut="Ctrl+Q",
@@ -38,21 +46,27 @@ class MainWindow(QMainWindow):
 
     def create_menus(self):
         self.file_menu = self.menuBar().addMenu('&File')
+        self.file_menu.addAction(self.open_action)
         self.file_menu.addAction(self.exit_action)
 
     def create_center_widget(self):
         self.fs_model = QFileSystemModel()
-        self.fs_model.setRootPath('/tmp')
 
         self.fs_view = QTreeView()
         self.fs_view.setModel(self.fs_model)
-        self.fs_view.setRootIndex(self.fs_model.index('/tmp'))
         self.fs_view.setSortingEnabled(True)
 
         self.setCentralWidget(self.fs_view)
 
     def create_statusbar(self):
         self.statusBar().showMessage('Ready')
+
+    def open_directory(self):
+        dir_name = QFileDialog.getExistingDirectory()
+        if dir_name:
+            self.fs_model.setRootPath(dir_name)
+            self.fs_view.setRootIndex(self.fs_model.index(dir_name))
+
 
 if __name__ == '__main__':
     main()
