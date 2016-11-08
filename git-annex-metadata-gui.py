@@ -3,6 +3,7 @@
 import sys
 from PyQt5.QtWidgets import QApplication
 from PyQt5.QtWidgets import QMainWindow
+from PyQt5.QtWidgets import QAction
 
 
 def main():
@@ -19,6 +20,15 @@ class MainWindow(QMainWindow):
         self.resize(800, 600)
         self.setWindowTitle('Git Annex Metadata Editor')
 
+        self.exit_action = QAction(
+            "Exit", self,
+            shortcut="Ctrl+Q",
+            statusTip="Exit the application",
+            triggered=self.close,
+        )
+
+        self.file_menu = self.menuBar().addMenu('&File')
+        self.file_menu.addAction(self.exit_action)
 
 if __name__ == '__main__':
     main()
