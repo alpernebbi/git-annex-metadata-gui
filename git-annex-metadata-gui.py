@@ -2,6 +2,7 @@
 
 import sys
 from PyQt5.QtCore import Qt
+from PyQt5.QtCore import QAbstractItemModel
 from PyQt5.QtWidgets import QApplication
 from PyQt5.QtWidgets import QMainWindow
 from PyQt5.QtWidgets import QAction
@@ -66,6 +67,32 @@ class MainWindow(QMainWindow):
         if dir_name:
             self.fs_model.setRootPath(dir_name)
             self.fs_view.setRootIndex(self.fs_model.index(dir_name))
+
+
+class GitAnnexMetadataModel(QAbstractItemModel):
+    def __init__(self):
+        super().__init__()
+
+    def flags(self, index):
+        pass
+
+    def data(self, index, role=None):
+        pass
+
+    def headerData(self, section, orientation, role=None):
+        pass
+
+    def rowCount(self, parent=None, *args, **kwargs):
+        pass
+
+    def columnCount(self, parent=None, *args, **kwargs):
+        pass
+
+    def index(self, row, column, parent=None, *args, **kwargs):
+        pass
+
+    def parent(self, index=None):
+        pass
 
 
 if __name__ == '__main__':
