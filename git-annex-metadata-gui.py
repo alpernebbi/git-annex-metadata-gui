@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 
 import sys
+import subprocess
+import json
+
 from PyQt5.QtCore import Qt
 from PyQt5.QtCore import QAbstractItemModel
 from PyQt5.QtWidgets import QApplication
@@ -70,8 +73,46 @@ class MainWindow(QMainWindow):
 
 
 class GitAnnexMetadataModel(QAbstractItemModel):
-    def __init__(self):
+    def __init__(self, repo_path):
         super().__init__()
+        self.repo_path = repo_path
+        self._metadata = None
+        self._metadata_start()
+
+    def _metadata_start(self):
+        self._metadata = subprocess.Popen(
+            ["git", "annex", "metadata", "--batch", "--json"],
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            universal_newlines=True,
+            cwd=self.repo_path,
+        )
+
+    def _metadata_query(self, **query):
+        while not (self._metadata and self._metadata.poll() is None):
+            print('Restarting metadata...')
+            self._metadata_start()
+        json_ = json.dumps(query)
+        print(json_, file=self._metadata.stdin, flush=True)
+        response = self._metadata.stdout.readline()
+        return json.loads(response)
+
+    def _keys(self):
+        jsons = subprocess.check_output(
+            ('git', 'annex', 'metadata', '--all', '--json'),
+            universal_newlines=True, cwd=self.repo_path,
+        ).splitlines()
+        meta_list = [json.loads(json_) for json_ in jsons]
+        return {meta['key'] for meta in meta_list}
+
+    def _files(self):
+        jsons = subprocess.check_output(
+            ('git', 'annex', 'metadata', '--json'),
+            universal_newlines=True, cwd=self.repo_path,
+        ).splitlines()
+        meta_list = [json.loads(json_) for json_ in jsons]
+        return {meta['file'] for meta in meta_list}
 
     def flags(self, index):
         pass
