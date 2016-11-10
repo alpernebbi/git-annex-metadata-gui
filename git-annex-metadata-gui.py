@@ -3,6 +3,7 @@
 import sys
 import subprocess
 import json
+import os
 from functools import partialmethod
 
 from PyQt5.QtCore import Qt
@@ -114,6 +115,36 @@ class GitAnnexMetadataModel(QAbstractItemModel):
         ).splitlines()
         meta_list = [json.loads(json_) for json_ in jsons]
         return {meta['file'] for meta in meta_list}
+
+    def _create_files_tree(self):
+        files = self._files()
+        files_root = GitAnnexDirectoryItem('[files]', None)
+
+        dirs = set()
+        for file in files:
+            dir_ = os.path.dirname(file)
+            while dir_:
+                dirs.add(dir_)
+                dir_ = os.path.dirname(dir_)
+
+        dir_items = {}
+        for dir_ in sorted(dirs):
+            parent = dir_items.get(os.path.dirname(dir_), files_root)
+            dir_item =  GitAnnexDirectoryItem(dir_, parent)
+            parent.add_child(dir_item)
+            dir_items[dir_] = dir_item
+
+        for file in files:
+            dir_ = os.path.dirname(file)
+            parent = dir_items.get(dir_, files_root)
+            file_item = GitAnnexMetadataItem(
+                parent=parent,
+                query_func=self._metadata_query,
+                path=file,
+            )
+            parent.add_child(file_item)
+
+        return files_root
 
     def flags(self, index):
         pass
