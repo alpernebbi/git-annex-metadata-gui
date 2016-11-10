@@ -56,6 +56,9 @@ class MainWindow(QMainWindow):
         self.file_menu.addAction(self.open_action)
         self.file_menu.addAction(self.exit_action)
 
+        self.header_menu = self.menuBar().addMenu('&Header')
+        self.header_menu.setDisabled(True)
+
     def create_center_widget(self):
         self.view_tabs = QTabWidget()
 
@@ -72,6 +75,35 @@ class MainWindow(QMainWindow):
     def create_statusbar(self):
         self.statusBar().showMessage('Ready')
 
+    def populate_header_menu(self):
+        self.header_menu.clear()
+
+        def toggle_field(field):
+            def func(checked):
+                index = self.annex_model.root.header_order.index(field)
+                files_header = self.files_view.header()
+                files_header.setSectionHidden(index, not checked)
+                keys_header = self.keys_view.header()
+                keys_header.setSectionHidden(index, not checked)
+            return func
+
+        def toggle_field_action(field):
+            action = QAction(
+                field.title(), self,
+                triggered=toggle_field(field),
+                checkable=True,
+            )
+            action.setChecked(True)
+            return action
+
+        default_fields = RootNode().header_order
+        for field in self.annex_model.root.header_order:
+            action = toggle_field_action(field)
+            if field in default_fields:
+                action.setDisabled(True)
+            self.header_menu.addAction(action)
+        self.header_menu.setDisabled(False)
+
     def open_directory(self):
         dir_name = QFileDialog.getExistingDirectory(self)
         if dir_name:
@@ -85,6 +117,8 @@ class MainWindow(QMainWindow):
                 self.keys_view.setModel(self.annex_model)
                 keys_index = self.annex_model.index(1, 0)
                 self.keys_view.setRootIndex(keys_index)
+
+                self.populate_header_menu()
             except RuntimeError as e:
                 print(e)
 
