@@ -134,9 +134,10 @@ class GitAnnexMetadataModel(QAbstractItemModel):
         return {meta['file'] for meta in meta_list}
 
     def _create_tree(self):
-        self.root = GitAnnexDirectoryItem(None, None)
+        self.root = RootNode()
+
         files = self._files()
-        files_root = GitAnnexDirectoryItem('[files]', self.root)
+        files_root = TreeNode(self.root, name='[files]')
 
         dirs = set()
         for file in files:
@@ -148,31 +149,32 @@ class GitAnnexMetadataModel(QAbstractItemModel):
         dir_items = {}
         for dir_ in sorted(dirs):
             parent = dir_items.get(os.path.dirname(dir_), files_root)
-            dir_item =  GitAnnexDirectoryItem(dir_, parent)
-            parent.add_child(dir_item)
+            name = os.path.basename(dir_)
+            dir_item = TreeNode(parent, name=name)
+            parent.children.append(dir_item)
             dir_items[dir_] = dir_item
 
         for file in files:
             dir_ = os.path.dirname(file)
             parent = dir_items.get(dir_, files_root)
-            file_item = GitAnnexMetadataItem(
+            file_item = AnnexNode(
                 parent=parent,
                 query_func=self._metadata_query,
                 path=file,
             )
-            parent.add_child(file_item)
-        self.root.add_child(files_root)
+            parent.children.append(file_item)
+        self.root.children.append(files_root)
 
         keys = self._keys()
-        keys_root = GitAnnexDirectoryItem('[keys]', self.root)
+        keys_root = TreeNode(self.root, name='[keys]')
         for key in keys:
-            item = GitAnnexMetadataItem(
+            item = AnnexNode(
                 parent=keys_root,
                 query_func=self._metadata_query,
                 key=key,
             )
-            keys_root.add_child(item)
-        self.root.add_child(keys_root)
+            keys_root.children.append(item)
+        self.root.children.append(keys_root)
 
     def flags(self, index):
         if not index.isValid():
@@ -187,16 +189,8 @@ class GitAnnexMetadataModel(QAbstractItemModel):
             return None
 
         item = index.internalPointer()
-
-        if isinstance(item, GitAnnexDirectoryItem):
-            return item.path
-        elif isinstance(item, GitAnnexMetadataItem):
-            try:
-                return item.key
-            except:
-                return item.path
-        else:
-            return None
+        arg = self.root.header_order[index.column()]
+        return item.data.get(arg, None)
 
     def headerData(self, section, orientation, role=None):
         if orientation != Qt.Horizontal:
@@ -204,10 +198,8 @@ class GitAnnexMetadataModel(QAbstractItemModel):
         if role != Qt.DisplayRole:
             return None
 
-        if section == 0:
-            return 'Path'
-        else:
-            return None
+        arg = self.root.header_order[section]
+        return self.root.header_names[arg]
 
     def rowCount(self, parent=QModelIndex(), *args, **kwargs):
         if parent.isValid():
@@ -215,13 +207,10 @@ class GitAnnexMetadataModel(QAbstractItemModel):
         else:
             item = self.root
 
-        if isinstance(item, GitAnnexDirectoryItem):
-            return len(item.children)
-        else:
-            return 0
+        return len(item.children)
 
     def columnCount(self, parent=QModelIndex(), *args, **kwargs):
-        return 1
+        return len(self.root.header_order)
 
     def index(self, row, column, parent=QModelIndex(), *args, **kwargs):
         if not self.hasIndex(row, column, parent):
@@ -252,38 +241,45 @@ class GitAnnexMetadataModel(QAbstractItemModel):
         return self.createIndex(parent_row, 0, parent)
 
 
-class GitAnnexDirectoryItem:
-    def __init__(self, path, parent):
-        self.path = path
+class TreeNode:
+    def __init__(self, parent, **kwargs):
+        self.data = kwargs
         self.parent = parent
         self.children = []
 
-    def add_child(self, child):
-        self.children.append(child)
-
     def __repr__(self):
-        repr_ = "GitAnnexDirectoryItem(path={!r}, children={!r})"
-        return repr_.format(self.path, self.children)
+        repr_ = "TreeNode(data={!r}, children={!r})"
+        return repr_.format(self.data, self.children)
 
 
-class GitAnnexMetadataItem:
+class RootNode(TreeNode):
+    def __init__(self):
+        super().__init__(None)
+        self.header_order = [
+            'name',
+            'key',
+        ]
+        self.header_names = {
+            'name': 'Filename',
+            'key': 'Git-Annex Key',
+        }
+
+
+class AnnexNode(TreeNode):
     def __init__(self, parent, query_func, key=None, path=None):
-        self.parent = parent
+        super().__init__(parent)
 
         if key:
-            self.key = key
-            self.query = partialmethod(query_func, key=self.key)
+            self.data['key'] = key
+            self._query = partialmethod(query_func, key=key)
         elif path:
-            self.path = path
-            self.query = partialmethod(query_func, file=self.path)
+            self.data['name'] = os.path.basename(path)
+            self._query = partialmethod(query_func, file=path)
         else:
             raise KeyError('Requires path or key')
 
     def __repr__(self):
-        try:
-            return "GitAnnexMetadataItem(key={!r})".format(self.key)
-        except:
-            return "GitAnnexMetadataItem(path={!r})".format(self.path)
+        return "AnnexNode(data={!r})".format(self.key)
 
 if __name__ == '__main__':
     main()
