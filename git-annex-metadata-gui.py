@@ -3,6 +3,7 @@
 import sys
 import subprocess
 import json
+from functools import partialmethod
 
 from PyQt5.QtCore import Qt
 from PyQt5.QtCore import QAbstractItemModel
@@ -135,6 +136,39 @@ class GitAnnexMetadataModel(QAbstractItemModel):
     def parent(self, index=None):
         pass
 
+
+class GitAnnexDirectoryItem:
+    def __init__(self, path, parent):
+        self.path = path
+        self.parent = parent
+        self.children = []
+
+    def add_child(self, child):
+        self.children.append(child)
+
+    def __repr__(self):
+        repr_ = "GitAnnexDirectoryItem(path={!r}, children={!r})"
+        return repr_.format(self.path, self.children)
+
+
+class GitAnnexMetadataItem:
+    def __init__(self, parent, query_func, key=None, path=None):
+        self.parent = parent
+
+        if key:
+            self.key = key
+            self.query = partialmethod(query_func, key=self.key)
+        elif path:
+            self.path = path
+            self.query = partialmethod(query_func, file=self.path)
+        else:
+            raise KeyError('Requires path or key')
+
+    def __repr__(self):
+        try:
+            return "GitAnnexMetadataItem(key={!r})".format(self.key)
+        except:
+            return "GitAnnexMetadataItem(path={!r})".format(self.path)
 
 if __name__ == '__main__':
     main()
