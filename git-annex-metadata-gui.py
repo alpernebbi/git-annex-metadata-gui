@@ -8,10 +8,10 @@ from functools import partialmethod
 
 from PyQt5.QtCore import Qt
 from PyQt5.QtCore import QAbstractItemModel
+from PyQt5.QtCore import QModelIndex
 from PyQt5.QtWidgets import QApplication
 from PyQt5.QtWidgets import QMainWindow
 from PyQt5.QtWidgets import QAction
-from PyQt5.QtWidgets import QFileSystemModel
 from PyQt5.QtWidgets import QTreeView
 from PyQt5.QtWidgets import QFileDialog
 
@@ -56,13 +56,9 @@ class MainWindow(QMainWindow):
         self.file_menu.addAction(self.exit_action)
 
     def create_center_widget(self):
-        self.fs_model = QFileSystemModel()
-
-        self.fs_view = QTreeView()
-        self.fs_view.setModel(self.fs_model)
-        self.fs_view.setSortingEnabled(True)
-
-        self.setCentralWidget(self.fs_view)
+        self.files_view = QTreeView()
+        self.files_view.setSortingEnabled(True)
+        self.setCentralWidget(self.files_view)
 
     def create_statusbar(self):
         self.statusBar().showMessage('Ready')
@@ -70,8 +66,13 @@ class MainWindow(QMainWindow):
     def open_directory(self):
         dir_name = QFileDialog.getExistingDirectory()
         if dir_name:
-            self.fs_model.setRootPath(dir_name)
-            self.fs_view.setRootIndex(self.fs_model.index(dir_name))
+            try:
+                self.annex_model = GitAnnexMetadataModel(dir_name)
+                self.files_view.setModel(self.annex_model)
+                files_index = self.annex_model.index(0, 0)
+                self.files_view.setRootIndex(files_index)
+            except RuntimeError as e:
+                print(e)
 
 
 class GitAnnexMetadataModel(QAbstractItemModel):
@@ -160,25 +161,81 @@ class GitAnnexMetadataModel(QAbstractItemModel):
         self.root.add_child(keys_root)
 
     def flags(self, index):
-        pass
+        if not index.isValid():
+            return Qt.NoItemFlags
+
+        return Qt.ItemIsEnabled | Qt.ItemIsSelectable
 
     def data(self, index, role=None):
-        pass
+        if not index.isValid():
+            return None
+        if role != Qt.DisplayRole:
+            return None
+
+        item = index.internalPointer()
+
+        if isinstance(item, GitAnnexDirectoryItem):
+            return item.path
+        elif isinstance(item, GitAnnexMetadataItem):
+            try:
+                return item.key
+            except:
+                return item.path
+        else:
+            return None
 
     def headerData(self, section, orientation, role=None):
-        pass
+        if orientation != Qt.Horizontal:
+            return None
+        if role != Qt.DisplayRole:
+            return None
 
-    def rowCount(self, parent=None, *args, **kwargs):
-        pass
+        if section == 0:
+            return 'Path'
+        else:
+            return None
 
-    def columnCount(self, parent=None, *args, **kwargs):
-        pass
+    def rowCount(self, parent=QModelIndex(), *args, **kwargs):
+        if parent.isValid():
+            item = parent.internalPointer()
+        else:
+            item = self.root
 
-    def index(self, row, column, parent=None, *args, **kwargs):
-        pass
+        if isinstance(item, GitAnnexDirectoryItem):
+            return len(item.children)
+        else:
+            return 0
 
-    def parent(self, index=None):
-        pass
+    def columnCount(self, parent=QModelIndex(), *args, **kwargs):
+        return 1
+
+    def index(self, row, column, parent=QModelIndex(), *args, **kwargs):
+        if not self.hasIndex(row, column, parent):
+            return QModelIndex()
+
+        if parent.isValid():
+            item = parent.internalPointer()
+        else:
+            item = self.root
+
+        try:
+            child = item.children[row]
+            return self.createIndex(row, column, child)
+        except:
+            return QModelIndex()
+
+    def parent(self, index=QModelIndex()):
+        if not index.isValid():
+            return QModelIndex()
+
+        child = index.internalPointer()
+        parent = child.parent
+
+        if parent == self.root:
+            return QModelIndex()
+
+        parent_row = parent.parent.children.index(parent)
+        return self.createIndex(parent_row, 0, parent)
 
 
 class GitAnnexDirectoryItem:
