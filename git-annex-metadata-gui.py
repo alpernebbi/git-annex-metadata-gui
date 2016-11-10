@@ -73,7 +73,7 @@ class MainWindow(QMainWindow):
         self.statusBar().showMessage('Ready')
 
     def open_directory(self):
-        dir_name = QFileDialog.getExistingDirectory()
+        dir_name = QFileDialog.getExistingDirectory(self)
         if dir_name:
             try:
                 self.annex_model = GitAnnexMetadataModel(dir_name)
@@ -279,7 +279,7 @@ class AnnexNode(TreeNode):
             raise KeyError('Requires path or key')
 
     def __repr__(self):
-        return "AnnexNode(data={!r})".format(self.key)
+        return "AnnexNode(data={!r})".format(self.data)
 
 if __name__ == '__main__':
     main()
