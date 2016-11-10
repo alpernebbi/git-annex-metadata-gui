@@ -80,8 +80,10 @@ class MainWindow(QMainWindow):
             self.annex_model = GitAnnexMetadataModel(dir_name)
             self.refresh_views()
             self.populate_header_menu()
-        except:
-            pass
+        except subprocess.CalledProcessError as err:
+            msg = 'Couldn\'t load "{}" as a git-annex repo'
+            self.statusBar().showMessage(msg.format(dir_name))
+            print(err)
 
     def refresh_views(self):
         self.files_view.setModel(self.annex_model)
