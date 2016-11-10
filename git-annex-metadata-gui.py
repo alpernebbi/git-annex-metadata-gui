@@ -75,6 +75,23 @@ class MainWindow(QMainWindow):
     def create_statusbar(self):
         self.statusBar().showMessage('Ready')
 
+    def load_repository(self, dir_name):
+        try:
+            self.annex_model = GitAnnexMetadataModel(dir_name)
+            self.refresh_views()
+            self.populate_header_menu()
+        except:
+            pass
+
+    def refresh_views(self):
+        self.files_view.setModel(self.annex_model)
+        files_index = self.annex_model.index(0, 0)
+        self.files_view.setRootIndex(files_index)
+
+        self.keys_view.setModel(self.annex_model)
+        keys_index = self.annex_model.index(1, 0)
+        self.keys_view.setRootIndex(keys_index)
+
     def populate_header_menu(self):
         self.header_menu.clear()
 
@@ -107,20 +124,7 @@ class MainWindow(QMainWindow):
     def open_directory(self):
         dir_name = QFileDialog.getExistingDirectory(self)
         if dir_name:
-            try:
-                self.annex_model = GitAnnexMetadataModel(dir_name)
-
-                self.files_view.setModel(self.annex_model)
-                files_index = self.annex_model.index(0, 0)
-                self.files_view.setRootIndex(files_index)
-
-                self.keys_view.setModel(self.annex_model)
-                keys_index = self.annex_model.index(1, 0)
-                self.keys_view.setRootIndex(keys_index)
-
-                self.populate_header_menu()
-            except RuntimeError as e:
-                print(e)
+            self.load_repository(dir_name)
 
 
 class GitAnnexMetadataModel(QAbstractItemModel):
