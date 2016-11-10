@@ -80,6 +80,8 @@ class GitAnnexMetadataModel(QAbstractItemModel):
         self.repo_path = repo_path
         self._metadata = None
         self._metadata_start()
+        self._root = None
+        self._create_tree()
 
     def _metadata_start(self):
         self._metadata = subprocess.Popen(
@@ -116,9 +118,10 @@ class GitAnnexMetadataModel(QAbstractItemModel):
         meta_list = [json.loads(json_) for json_ in jsons]
         return {meta['file'] for meta in meta_list}
 
-    def _create_files_tree(self):
+    def _create_tree(self):
+        self.root = GitAnnexDirectoryItem(None, None)
         files = self._files()
-        files_root = GitAnnexDirectoryItem('[files]', None)
+        files_root = GitAnnexDirectoryItem('[files]', self.root)
 
         dirs = set()
         for file in files:
@@ -143,12 +146,10 @@ class GitAnnexMetadataModel(QAbstractItemModel):
                 path=file,
             )
             parent.add_child(file_item)
+        self.root.add_child(files_root)
 
-        return files_root
-
-    def _create_keys_tree(self):
         keys = self._keys()
-        keys_root = GitAnnexDirectoryItem('[keys]', None)
+        keys_root = GitAnnexDirectoryItem('[keys]', self.root)
         for key in keys:
             item = GitAnnexMetadataItem(
                 parent=keys_root,
@@ -156,7 +157,7 @@ class GitAnnexMetadataModel(QAbstractItemModel):
                 key=key,
             )
             keys_root.add_child(item)
-        return keys_root
+        self.root.add_child(keys_root)
 
     def flags(self, index):
         pass
