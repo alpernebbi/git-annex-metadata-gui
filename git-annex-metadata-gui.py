@@ -4,7 +4,7 @@ import sys
 import subprocess
 import json
 import os
-from functools import partialmethod
+from functools import partial
 
 from PyQt5.QtCore import Qt
 from PyQt5.QtCore import QAbstractItemModel
@@ -162,6 +162,10 @@ class GitAnnexMetadataModel(QAbstractItemModel):
                 query_func=self._metadata_query,
                 path=file,
             )
+            for field in file_item.data:
+                if field not in self.root.header_order:
+                    self.root.header_order.append(field)
+                    self.root.header_names[field] = field.title()
             parent.children.append(file_item)
         self.root.children.append(files_root)
 
@@ -270,13 +274,34 @@ class AnnexNode(TreeNode):
         super().__init__(parent)
 
         if key:
-            self.data['key'] = key
-            self._query = partialmethod(query_func, key=key)
+            self._query = partial(query_func, key=key)
         elif path:
-            self.data['name'] = os.path.basename(path)
-            self._query = partialmethod(query_func, file=path)
+            self._query = partial(query_func, file=path)
         else:
             raise KeyError('Requires path or key')
+
+    @property
+    def data(self):
+        metadata = self._query()
+
+        data_ = {k: json.dumps(v) for k, v in metadata['fields'].items()
+                 if not k.endswith('lastchanged')}
+
+        data_['key'] = metadata['key']
+        if metadata['file']:
+            data_['path'] = metadata['file']
+            data_['name'] = os.path.basename(metadata['file'])
+        else:
+            data_['path'] = None
+            data_['name'] = None
+        return data_
+
+    @data.setter
+    def data(self, value):
+        try:
+            self._query(fields=value)
+        except AttributeError:
+            pass
 
     def __repr__(self):
         return "AnnexNode(data={!r})".format(self.data)
