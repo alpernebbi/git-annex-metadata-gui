@@ -146,6 +146,18 @@ class GitAnnexMetadataModel(QAbstractItemModel):
 
         return files_root
 
+    def _create_keys_tree(self):
+        keys = self._keys()
+        keys_root = GitAnnexDirectoryItem('[keys]', None)
+        for key in keys:
+            item = GitAnnexMetadataItem(
+                parent=keys_root,
+                query_func=self._metadata_query,
+                key=key,
+            )
+            keys_root.add_child(item)
+        return keys_root
+
     def flags(self, index):
         pass
 
