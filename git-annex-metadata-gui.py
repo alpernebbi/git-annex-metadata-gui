@@ -14,6 +14,7 @@ from PyQt5.QtWidgets import QMainWindow
 from PyQt5.QtWidgets import QAction
 from PyQt5.QtWidgets import QTreeView
 from PyQt5.QtWidgets import QFileDialog
+from PyQt5.QtWidgets import QTabWidget
 
 
 def main():
@@ -56,9 +57,17 @@ class MainWindow(QMainWindow):
         self.file_menu.addAction(self.exit_action)
 
     def create_center_widget(self):
+        self.view_tabs = QTabWidget()
+
         self.files_view = QTreeView()
         self.files_view.setSortingEnabled(True)
-        self.setCentralWidget(self.files_view)
+        self.view_tabs.addTab(self.files_view, 'Files')
+
+        self.keys_view = QTreeView()
+        self.keys_view .setSortingEnabled(True)
+        self.view_tabs.addTab(self.keys_view, 'Keys')
+
+        self.setCentralWidget(self.view_tabs)
 
     def create_statusbar(self):
         self.statusBar().showMessage('Ready')
@@ -68,9 +77,14 @@ class MainWindow(QMainWindow):
         if dir_name:
             try:
                 self.annex_model = GitAnnexMetadataModel(dir_name)
+
                 self.files_view.setModel(self.annex_model)
                 files_index = self.annex_model.index(0, 0)
                 self.files_view.setRootIndex(files_index)
+
+                self.keys_view.setModel(self.annex_model)
+                keys_index = self.annex_model.index(1, 0)
+                self.keys_view.setRootIndex(keys_index)
             except RuntimeError as e:
                 print(e)
 
