@@ -235,12 +235,22 @@ class GitAnnexMetadataModel(QAbstractItemModel):
     def data(self, index, role=None):
         if not index.isValid():
             return None
-        if role != Qt.DisplayRole:
-            return None
 
         item = index.internalPointer()
         arg = self.root.header_order[index.column()]
-        return item.data.get(arg, None)
+        value = item.data.get(arg, None)
+
+        if role == Qt.UserRole:
+            return value
+        elif role == Qt.DisplayRole:
+            if isinstance(value, list):
+                if len(value) > 1:
+                    return '<{} values>'.format(len(value))
+                elif len(value) == 1:
+                    return value[0]
+                else:
+                    return None
+            return value
 
     def headerData(self, section, orientation, role=None):
         if orientation != Qt.Horizontal:
@@ -330,7 +340,7 @@ class AnnexNode(TreeNode):
     def data(self):
         metadata = self._query()
 
-        data_ = {k: json.dumps(v) for k, v in metadata['fields'].items()
+        data_ = {k: v for k, v in metadata['fields'].items()
                  if not k.endswith('lastchanged')}
 
         data_['key'] = metadata['key']
