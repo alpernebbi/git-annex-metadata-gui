@@ -359,10 +359,8 @@ class AnnexNode(TreeNode):
 
         data_['key'] = metadata['key']
         if metadata['file']:
-            data_['path'] = metadata['file']
             data_['name'] = os.path.basename(metadata['file'])
         else:
-            data_['path'] = None
             data_['name'] = None
         return data_
 
