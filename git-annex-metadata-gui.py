@@ -265,6 +265,11 @@ class GitAnnexMetadataModel(QAbstractItemModel):
                 else:
                     return None
             return value
+        elif role == Qt.ToolTipRole:
+            if isinstance(value, list):
+                return json.dumps(value)
+            else:
+                return value
 
     def headerData(self, section, orientation, role=None):
         if orientation != Qt.Horizontal:
