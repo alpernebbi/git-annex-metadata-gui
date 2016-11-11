@@ -138,6 +138,8 @@ class MainWindow(QMainWindow):
             action = toggle_field_action(field)
             if field in default_fields:
                 action.setDisabled(True)
+            else:
+                action.trigger()
             self.header_menu.addAction(action)
         self.header_menu.setDisabled(False)
 
