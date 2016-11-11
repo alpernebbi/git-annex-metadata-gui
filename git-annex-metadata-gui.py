@@ -94,6 +94,12 @@ class MainWindow(QMainWindow):
         keys_index = self.annex_model.index(1, 0)
         self.keys_view.setRootIndex(keys_index)
 
+        name_index = self.annex_model.root.header_order.index('name')
+        self.keys_view.header().setSectionHidden(name_index, True)
+
+        key_index = self.annex_model.root.header_order.index('key')
+        self.files_view.header().setSectionHidden(key_index, True)
+
     def populate_header_menu(self):
         self.header_menu.clear()
 
