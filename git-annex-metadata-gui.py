@@ -240,6 +240,33 @@ class GitAnnexMetadataModel(QAbstractItemModel):
             keys_root.children.append(item)
         self.root.children.append(keys_root)
 
+    def sort(self, column, sort_order=Qt.AscendingOrder):
+        def sort_key(node):
+            arg = self.root.header_order[column]
+            value = node.data.get(arg, None)
+            if isinstance(value, list):
+                if len(value) == 1:
+                    return value[0]
+                else:
+                    return ''
+            elif value:
+                return value
+            return ''
+
+        def sort_node(node):
+            node.children[:] = sorted(
+                node.children,
+                key=sort_key,
+                reverse=(sort_order == Qt.DescendingOrder)
+            )
+            for child in node.children:
+                sort_node(child)
+
+        self.layoutAboutToBeChanged.emit()
+        sort_node(self.root.children[0])
+        sort_node(self.root.children[1])
+        self.layoutChanged.emit()
+
     def flags(self, index):
         if not index.isValid():
             return Qt.NoItemFlags
