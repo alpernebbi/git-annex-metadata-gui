@@ -15,6 +15,7 @@ from PyQt5.QtWidgets import QAction
 from PyQt5.QtWidgets import QTreeView
 from PyQt5.QtWidgets import QFileDialog
 from PyQt5.QtWidgets import QTabWidget
+from PyQt5.QtWidgets import QHeaderView
 
 
 def main():
@@ -94,11 +95,22 @@ class MainWindow(QMainWindow):
         keys_index = self.annex_model.index(1, 0)
         self.keys_view.setRootIndex(keys_index)
 
-        name_index = self.annex_model.root.header_order.index('name')
-        self.keys_view.header().setSectionHidden(name_index, True)
+        name_sect = self.annex_model.root.header_order.index('name')
+        key_sect = self.annex_model.root.header_order.index('key')
 
-        key_index = self.annex_model.root.header_order.index('key')
-        self.files_view.header().setSectionHidden(key_index, True)
+        keys_head = self.keys_view.header()
+        keys_head.setSectionHidden(name_sect, True)
+        keys_head.setStretchLastSection(False)
+        keys_head.setSectionResizeMode(key_sect, QHeaderView.Fixed)
+        keys_head.resizeSections(QHeaderView.ResizeToContents)
+
+        files_head = self.files_view.header()
+        files_head.setSectionHidden(key_sect, True)
+        files_head.setStretchLastSection(False)
+        files_head.setSectionResizeMode(name_sect, QHeaderView.Fixed)
+        self.files_view.expandAll()
+        files_head.resizeSections(QHeaderView.ResizeToContents)
+        self.files_view.collapseAll()
 
     def populate_header_menu(self):
         self.header_menu.clear()
