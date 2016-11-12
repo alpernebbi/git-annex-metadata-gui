@@ -4,15 +4,19 @@ import sys
 import subprocess
 import json
 import os
+import collections.abc
 from functools import partial
+from collections import defaultdict
 
 from PyQt5.QtCore import Qt
 from PyQt5.QtCore import QAbstractItemModel
+from PyQt5.QtCore import QAbstractTableModel
 from PyQt5.QtCore import QModelIndex
 from PyQt5.QtWidgets import QApplication
 from PyQt5.QtWidgets import QMainWindow
 from PyQt5.QtWidgets import QAction
 from PyQt5.QtWidgets import QTreeView
+from PyQt5.QtWidgets import QTableView
 from PyQt5.QtWidgets import QFileDialog
 from PyQt5.QtWidgets import QTabWidget
 from PyQt5.QtWidgets import QHeaderView
@@ -69,7 +73,7 @@ class MainWindow(QMainWindow):
         self.files_view.setSortingEnabled(True)
         self.view_tabs.addTab(self.files_view, 'Files')
 
-        self.keys_view = QTreeView()
+        self.keys_view = QTableView()
         self.keys_view .setSortingEnabled(True)
         self.view_tabs.addTab(self.keys_view, 'Keys')
 
@@ -80,7 +84,8 @@ class MainWindow(QMainWindow):
 
     def load_repository(self, dir_name):
         try:
-            self.annex_model = GitAnnexMetadataModel(dir_name)
+            self.keys_model = GitAnnexKeysModel(dir_name)
+            self.files_model = GitAnnexFilesModel(dir_name)
             self.refresh_views()
             self.populate_header_menu()
         except subprocess.CalledProcessError as err:
@@ -89,27 +94,17 @@ class MainWindow(QMainWindow):
             print(err)
 
     def refresh_views(self):
-        self.files_view.setModel(self.annex_model)
-        files_index = self.annex_model.index(0, 0)
-        self.files_view.setRootIndex(files_index)
+        self.keys_view.setModel(self.keys_model)
+        self.files_view.setModel(self.files_model)
 
-        self.keys_view.setModel(self.annex_model)
-        keys_index = self.annex_model.index(1, 0)
-        self.keys_view.setRootIndex(keys_index)
-
-        name_sect = self.annex_model.root.header_order.index('name')
-        key_sect = self.annex_model.root.header_order.index('key')
-
-        keys_head = self.keys_view.header()
-        keys_head.setSectionHidden(name_sect, True)
+        keys_head = self.keys_view.horizontalHeader()
         keys_head.setStretchLastSection(False)
-        keys_head.setSectionResizeMode(key_sect, QHeaderView.Fixed)
+        keys_head.setSectionResizeMode(0, QHeaderView.Fixed)
         keys_head.resizeSections(QHeaderView.ResizeToContents)
 
         files_head = self.files_view.header()
-        files_head.setSectionHidden(key_sect, True)
         files_head.setStretchLastSection(False)
-        files_head.setSectionResizeMode(name_sect, QHeaderView.Fixed)
+        files_head.setSectionResizeMode(0, QHeaderView.Fixed)
         self.files_view.expandAll()
         files_head.resizeSections(QHeaderView.ResizeToContents)
         self.files_view.collapseAll()
@@ -119,26 +114,38 @@ class MainWindow(QMainWindow):
 
         def toggle_field(field):
             def func(checked):
-                index = self.annex_model.root.header_order.index(field)
+                keys_args = list(map(
+                    lambda x: x[0], self.keys_model.headers))
+                keys_index = list(keys_args).index(field)
+                keys_header = self.keys_view.horizontalHeader()
+                keys_header.setSectionHidden(keys_index, not checked)
+
+                files_args = list(map(
+                    lambda x: x[0], self.files_model.headers))
+                files_index = files_args.index(field)
                 files_header = self.files_view.header()
-                files_header.setSectionHidden(index, not checked)
-                keys_header = self.keys_view.header()
-                keys_header.setSectionHidden(index, not checked)
+                files_header.setSectionHidden(files_index, not checked)
             return func
 
-        def toggle_field_action(field):
+        def toggle_field_action(arg, field):
             action = QAction(
-                field.title(), self,
-                triggered=toggle_field(field),
+                field, self,
+                triggered=toggle_field(arg),
                 checkable=True,
             )
             action.setChecked(True)
             return action
 
-        default_fields = RootNode().header_order
-        for field in self.annex_model.root.header_order:
-            action = toggle_field_action(field)
-            if field in default_fields:
+        default_fields = ['file', 'key']
+        file = self.files_model.headers[0]
+        key = self.keys_model.headers[0]
+        headers = self.files_model.headers[1:] \
+                  + self.keys_model.headers[1:]
+        headers = [file, key] + sorted(set(headers))
+
+        for arg, field in headers:
+            action = toggle_field_action(arg, field)
+            if arg in default_fields:
                 action.setDisabled(True)
             else:
                 action.trigger()
@@ -190,101 +197,105 @@ class GitAnnex:
     def files(self):
         return {meta['file'] for meta in self.metadata()}
 
+    def item(self, key=None, path=None):
+        if key:
+            return GitAnnexItem(self, key, file=path)
+        elif path:
+            key = self.query(file=path)['key']
+            return GitAnnexItem(self, key, file=path)
+        else:
+            raise ValueError('Requires path or key')
 
-class GitAnnexMetadataModel(QAbstractItemModel):
+    def __repr__(self):
+        return 'GitAnnex(repo_path={!r})'.format(self.repo_path)
+
+
+class GitAnnexItem(collections.abc.MutableMapping):
+    def __init__(self, annex, key, file=None):
+        self.key = key
+        self.file = file
+        self.query = partial(annex.query, key=key)
+
+    def fields(self, **fields):
+        if not fields:
+            return self.query()['fields']
+        else:
+            return self.query(fields=fields)['fields']
+
+    def __getitem__(self, meta_key):
+        if meta_key == 'key':
+            return [self.key]
+        if meta_key == 'file':
+            return [self.file]
+        values = self.fields().get(meta_key, [])
+        return values
+
+    def __setitem__(self, meta_key, value):
+        self.fields(**{meta_key: value})
+
+    def __delitem__(self, meta_key):
+        self.fields(**{meta_key: []})
+
+    def __contains__(self, meta_key):
+        return meta_key in self.fields()
+
+    def __iter__(self):
+        for field in self.fields().keys():
+            if not field.endswith('lastchanged'):
+                yield field
+
+    def __len__(self):
+        len([x for x in self])
+
+    def __eq__(self, other):
+        try:
+            return self.key == other.key
+        except AttributeError:
+            return False
+
+    def __hash__(self):
+        return hash(('GitAnnexItem', self.key, self.file))
+
+    def __repr__(self):
+        return 'GitAnnexItem(key={!r}, file={!r})'.format(
+            self.key, self.file)
+
+
+class GitAnnexKeysModel(QAbstractTableModel):
     def __init__(self, repo_path):
         super().__init__()
-        self._annex = GitAnnex(repo_path)
-        self._root = None
-        self._create_tree()
+        self.annex = GitAnnex(repo_path)
+        self.headers = [('key', 'Git-Annex Key')]
 
-    def _create_tree(self):
-        self.root = RootNode()
+        self.keys = list(self.annex.keys())
+        self.items = [self.annex.item(key) for key in self.keys]
 
-        files = self._annex.files()
-        files_root = TreeNode(self.root, name='[files]')
+        metadata = self.annex.metadata(all=True)
+        fields = [meta.get('fields', {}) for meta in metadata]
+        if fields:
+            field_names = sorted(set.union(*map(set, fields)))
+            for name in field_names:
+                if not name.endswith('lastchanged'):
+                    self.headers.append((name, name.title()))
 
-        dirs = set()
-        for file in files:
-            dir_ = os.path.dirname(file)
-            while dir_:
-                dirs.add(dir_)
-                dir_ = os.path.dirname(dir_)
+    def rowCount(self, parent=QModelIndex(), *args, **kwargs):
+        if parent.isValid():
+            return 0
+        return len(self.items)
 
-        dir_items = {}
-        for dir_ in sorted(dirs):
-            parent = dir_items.get(os.path.dirname(dir_), files_root)
-            name = os.path.basename(dir_)
-            dir_item = TreeNode(parent, name=name)
-            parent.children.append(dir_item)
-            dir_items[dir_] = dir_item
-
-        for file in files:
-            dir_ = os.path.dirname(file)
-            parent = dir_items.get(dir_, files_root)
-            file_item = AnnexNode(
-                parent=parent,
-                query_func=self._annex.query,
-                path=file,
-            )
-            for field in file_item.data:
-                if field not in self.root.header_order:
-                    self.root.header_order.append(field)
-                    self.root.header_names[field] = field.title()
-            parent.children.append(file_item)
-        self.root.children.append(files_root)
-
-        keys = self._annex.keys()
-        keys_root = TreeNode(self.root, name='[keys]')
-        for key in keys:
-            item = AnnexNode(
-                parent=keys_root,
-                query_func=self._annex.query,
-                key=key,
-            )
-            keys_root.children.append(item)
-        self.root.children.append(keys_root)
-
-    def sort(self, column, sort_order=Qt.AscendingOrder):
-        def sort_key(node):
-            arg = self.root.header_order[column]
-            value = node.data.get(arg, None)
-            if isinstance(value, list):
-                if len(value) == 1:
-                    return value[0]
-                else:
-                    return ''
-            elif value:
-                return value
-            return ''
-
-        def sort_node(node):
-            node.children[:] = sorted(
-                node.children,
-                key=sort_key,
-                reverse=(sort_order == Qt.DescendingOrder)
-            )
-            for child in node.children:
-                sort_node(child)
-
-        self.layoutAboutToBeChanged.emit()
-        sort_node(self.root.children[0])
-        sort_node(self.root.children[1])
-        self.layoutChanged.emit()
-
-    def flags(self, index):
-        if not index.isValid():
-            return Qt.NoItemFlags
-
-        return Qt.ItemIsEnabled | Qt.ItemIsSelectable
+    def columnCount(self, parent=QModelIndex(), *args, **kwargs):
+        if parent.isValid():
+            return 0
+        return len(self.headers)
 
     def data(self, index, role=None):
         if not index.isValid():
             return None
 
-        item = index.internalPointer()
-        arg = self.root.header_order[index.column()]
-        value = item.data.get(arg, None)
+        row, column = index.row(), index.column()
+        item = self.items[row]
+        arg = self.headers[column][0]
+        value = item[arg]
 
         if role == Qt.UserRole:
             return value
@@ -303,113 +314,207 @@ class GitAnnexMetadataModel(QAbstractItemModel):
             else:
                 return value
 
-    def headerData(self, section, orientation, role=None):
+    def headerData(self, column, orientation=None, role=None):
         if orientation != Qt.Horizontal:
             return None
-        if role != Qt.DisplayRole:
-            return None
+        if role == Qt.DisplayRole:
+            return self.headers[column][1]
 
-        arg = self.root.header_order[section]
-        return self.root.header_names[arg]
+    def flags(self, index):
+        if not index.isValid():
+            return Qt.NoItemFlags
+        return Qt.ItemIsEnabled | Qt.ItemIsSelectable
+
+    def sort(self, column, sort_order=None):
+        def sort_key(item):
+            arg = self.headers[column][0]
+            value = item[arg]
+            if isinstance(value, list):
+                return -len(value), (value[-1] if value else '')
+            else:
+                return value
+
+        self.layoutAboutToBeChanged.emit()
+        self.items[:] = sorted(
+            self.items, key=sort_key,
+            reverse=(sort_order == Qt.DescendingOrder),
+        )
+        self.layoutChanged.emit()
+
+    def __repr__(self):
+        return 'GitAnnexKeysModel(repo_path={!r}, items={!r})'.format(
+            self.annex.repo_path, self.items)
+
+
+class GitAnnexFilesModel(QAbstractItemModel):
+    def __init__(self, repo_path):
+        super().__init__()
+        self.annex = GitAnnex(repo_path)
+        self.headers = [('file', 'Filename')]
+        self.tree = Tree()
+
+        metadata = self.annex.metadata(all=True)
+        fields = [meta.get('fields', {}) for meta in metadata]
+        if fields:
+            field_names = sorted(set.union(*map(set, fields)))
+            for name in field_names:
+                if not name.endswith('lastchanged'):
+                    self.headers.append((name, name.title()))
+
+        for meta in self.annex.metadata():
+            file, key = meta['file'], meta['key']
+            parent_dir = os.path.dirname(file)
+            self.tree.add(parent_dir, self.annex.item(key, file))
+
+        for dir_ in self.tree.parents():
+            while dir_:
+                parent = os.path.dirname(dir_)
+                self.tree.add(parent, dir_)
+                dir_, parent = parent, os.path.dirname(parent)
 
     def rowCount(self, parent=QModelIndex(), *args, **kwargs):
         if parent.isValid():
-            item = parent.internalPointer()
+            return len(self.tree.children(parent.internalPointer()))
         else:
-            item = self.root
-
-        return len(item.children)
+            return len(self.tree.children(''))
 
     def columnCount(self, parent=QModelIndex(), *args, **kwargs):
-        return len(self.root.header_order)
+        return len(self.headers)
 
     def index(self, row, column, parent=QModelIndex(), *args, **kwargs):
         if not self.hasIndex(row, column, parent):
             return QModelIndex()
 
-        if parent.isValid():
-            item = parent.internalPointer()
-        else:
-            item = self.root
-
         try:
-            child = item.children[row]
+            item = parent.internalPointer() if parent.isValid() else ''
+            child = self.tree.children(item)[row]
             return self.createIndex(row, column, child)
-        except:
+        except IndexError:
             return QModelIndex()
 
     def parent(self, index=QModelIndex()):
         if not index.isValid():
             return QModelIndex()
 
-        child = index.internalPointer()
-        parent = child.parent
-
-        if parent == self.root:
+        try:
+            item = index.internalPointer() if index.isValid() else ''
+            parent = self.tree.parent(item)
+            grand_parent = self.tree.parent(parent)
+            parent_row = self.tree.children(grand_parent).index(parent)
+            return self.createIndex(parent_row, 0, parent)
+        except (IndexError, KeyError):
             return QModelIndex()
 
-        parent_row = parent.parent.children.index(parent)
-        return self.createIndex(parent_row, 0, parent)
+    def data(self, index, role=None):
+        if not index.isValid():
+            return None
 
+        row, column = index.row(), index.column()
+        item = index.internalPointer()
+        arg = self.headers[column][0]
+        value = item[arg] if isinstance(item, GitAnnexItem) else item
 
-class TreeNode:
-    def __init__(self, parent, **kwargs):
-        self.data = kwargs
-        self.parent = parent
-        self.children = []
+        if role == Qt.UserRole:
+            return value
+        elif role == Qt.DisplayRole:
+            if isinstance(value, list):
+                if len(value) > 1:
+                    return '<{} values>'.format(len(value))
+                elif len(value) == 1:
+                    if arg == 'file':
+                        return os.path.basename(value[0])
+                    else:
+                        return value[0]
+            elif index.column() == 0:
+                if arg == 'file':
+                    return os.path.basename(value)
+                else:
+                    return value
+        elif role == Qt.ToolTipRole:
+            if isinstance(value, list):
+                return json.dumps(value)
+            else:
+                return value
+
+    def headerData(self, column, orientation=None, role=None):
+        if orientation != Qt.Horizontal:
+            return None
+        if role == Qt.DisplayRole:
+            return self.headers[column][1]
+
+    def flags(self, index):
+        if not index.isValid():
+            return Qt.NoItemFlags
+
+        item = index.internalPointer()
+        if isinstance(item, GitAnnexItem):
+            return Qt.ItemIsEnabled | Qt.ItemIsSelectable
+        else:
+            return Qt.ItemIsEnabled
+
+    def sort(self, column, sort_order=Qt.AscendingOrder):
+        arg = self.headers[column][0]
+
+        def sort_key(item):
+            if isinstance(item, GitAnnexItem):
+                value = item[arg]
+                return -len(value), (value[-1] if value else '')
+            elif item and arg == 'file':
+                return -1, item
+            else:
+                return 0, ''
+
+        self.layoutAboutToBeChanged.emit()
+        self.tree.sort(
+            key=sort_key,
+            reverse=(sort_order == Qt.DescendingOrder)
+        )
+        self.layoutChanged.emit()
 
     def __repr__(self):
-        repr_ = "TreeNode(data={!r}, children={!r})"
-        return repr_.format(self.data, self.children)
+        return 'GitAnnexFilesModel(repo_path={!r}, tree={!r})'.format(
+            self.annex.repo_path, self.tree)
 
 
-class RootNode(TreeNode):
+class Tree:
     def __init__(self):
-        super().__init__(None)
-        self.header_order = [
-            'name',
-            'key',
-        ]
-        self.header_names = {
-            'name': 'Filename',
-            'key': 'Git-Annex Key',
-        }
+        self._child_to_parent = {}
+        self._parent_to_children = defaultdict(list)
 
+    def add(self, parent, *children):
+        children = list(filter(
+            lambda c: c not in self._parent_to_children[parent],
+            children
+        ))
 
-class AnnexNode(TreeNode):
-    def __init__(self, parent, query_func, key=None, path=None):
-        super().__init__(parent)
+        self._parent_to_children[parent].extend(children)
+        self._child_to_parent.update({c: parent for c in children})
 
-        if key:
-            self._query = partial(query_func, key=key)
-        elif path:
-            self._query = partial(query_func, file=path)
-        else:
-            raise KeyError('Requires path or key')
+    def remove(self, parent, child):
+        if self._child_to_parent[child] == parent:
+            del self._child_to_parent[child]
+        if child in self._parent_to_children[parent]:
+            self._parent_to_children[parent].remove(child)
 
-    @property
-    def data(self):
-        metadata = self._query()
+    def parent(self, child):
+        return self._child_to_parent[child]
 
-        data_ = {k: v for k, v in metadata['fields'].items()
-                 if not k.endswith('lastchanged')}
+    def parents(self):
+        return list(self._parent_to_children)
 
-        data_['key'] = metadata['key']
-        if metadata['file']:
-            data_['name'] = os.path.basename(metadata['file'])
-        else:
-            data_['name'] = None
-        return data_
+    def children(self, parent):
+        return self._parent_to_children[parent]
 
-    @data.setter
-    def data(self, value):
-        try:
-            self._query(fields=value)
-        except AttributeError:
-            pass
+    def sort(self, key=None, reverse=None):
+        for parent, children in self._parent_to_children.items():
+            children[:] = sorted(
+                sorted(children, key=key, reverse=reverse),
+                key=lambda x: not isinstance(x, str)
+            )
 
     def __repr__(self):
-        return "AnnexNode(data={!r})".format(self.data)
+        return 'Tree(c2p={!r}, p2c={!r})'.format(
+            self._child_to_parent, self._parent_to_children)
 
 if __name__ == '__main__':
     main()
