@@ -21,6 +21,8 @@ from PyQt5.QtWidgets import QHeaderView
 def main():
     app = QApplication(sys.argv)
     window = MainWindow()
+    if sys.argv and len(sys.argv) > 1:
+        window.load_repository(sys.argv[1])
     window.show()
     sys.exit(app.exec_())
 
