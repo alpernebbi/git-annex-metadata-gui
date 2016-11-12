@@ -151,17 +151,13 @@ class MainWindow(QMainWindow):
             self.load_repository(dir_name)
 
 
-class GitAnnexMetadataModel(QAbstractItemModel):
+class GitAnnex:
     def __init__(self, repo_path):
-        super().__init__()
         self.repo_path = repo_path
-        self._metadata = None
-        self._metadata_start()
-        self._root = None
-        self._create_tree()
+        self._process = self.start()
 
-    def _metadata_start(self):
-        self._metadata = subprocess.Popen(
+    def start(self):
+        process = subprocess.Popen(
             ["git", "annex", "metadata", "--batch", "--json"],
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
@@ -169,36 +165,43 @@ class GitAnnexMetadataModel(QAbstractItemModel):
             universal_newlines=True,
             cwd=self.repo_path,
         )
+        return process
 
-    def _metadata_query(self, **query):
-        while not (self._metadata and self._metadata.poll() is None):
+    def query(self, **query):
+        while not (self._process and self._process.poll() is None):
             print('Restarting metadata...')
-            self._metadata_start()
+            self._process = self.start()
         json_ = json.dumps(query)
-        print(json_, file=self._metadata.stdin, flush=True)
-        response = self._metadata.stdout.readline()
+        print(json_, file=self._process.stdin, flush=True)
+        response = self._process.stdout.readline()
         return json.loads(response)
 
-    def _keys(self):
+    def metadata(self, all=False):
         jsons = subprocess.check_output(
-            ('git', 'annex', 'metadata', '--all', '--json'),
+            ('git', 'annex', 'metadata', '--json',
+             '--all' if all else ''),
             universal_newlines=True, cwd=self.repo_path,
         ).splitlines()
-        meta_list = [json.loads(json_) for json_ in jsons]
-        return {meta['key'] for meta in meta_list}
+        return [json.loads(json_) for json_ in jsons]
 
-    def _files(self):
-        jsons = subprocess.check_output(
-            ('git', 'annex', 'metadata', '--json'),
-            universal_newlines=True, cwd=self.repo_path,
-        ).splitlines()
-        meta_list = [json.loads(json_) for json_ in jsons]
-        return {meta['file'] for meta in meta_list}
+    def keys(self):
+        return {meta['key'] for meta in self.metadata(all=True)}
+
+    def files(self):
+        return {meta['file'] for meta in self.metadata()}
+
+
+class GitAnnexMetadataModel(QAbstractItemModel):
+    def __init__(self, repo_path):
+        super().__init__()
+        self._annex = GitAnnex(repo_path)
+        self._root = None
+        self._create_tree()
 
     def _create_tree(self):
         self.root = RootNode()
 
-        files = self._files()
+        files = self._annex.files()
         files_root = TreeNode(self.root, name='[files]')
 
         dirs = set()
@@ -221,7 +224,7 @@ class GitAnnexMetadataModel(QAbstractItemModel):
             parent = dir_items.get(dir_, files_root)
             file_item = AnnexNode(
                 parent=parent,
-                query_func=self._metadata_query,
+                query_func=self._annex.query,
                 path=file,
             )
             for field in file_item.data:
@@ -231,12 +234,12 @@ class GitAnnexMetadataModel(QAbstractItemModel):
             parent.children.append(file_item)
         self.root.children.append(files_root)
 
-        keys = self._keys()
+        keys = self._annex.keys()
         keys_root = TreeNode(self.root, name='[keys]')
         for key in keys:
             item = AnnexNode(
                 parent=keys_root,
-                query_func=self._metadata_query,
+                query_func=self._annex.query,
                 key=key,
             )
             keys_root.children.append(item)
