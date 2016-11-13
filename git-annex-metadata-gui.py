@@ -3,6 +3,7 @@
 import sys
 import subprocess
 import json
+import re
 import os
 import collections.abc
 from functools import partial
@@ -261,6 +262,61 @@ class GitAnnexItem(collections.abc.MutableMapping):
             self.key, self.file)
 
 
+class GitAnnexParsedItem(GitAnnexItem):
+    def __new__(cls, parent, in_parser=None, out_parser=None):
+        self = parent.__class__.__new__(parent.__class__)
+        self.__dict__.update(parent.__dict__)
+        self.__class__ = cls
+        return self
+
+    def __init__(self, parent, parse=None, format=None):
+        self.parse = parse
+        self.format = format
+
+    def __getitem__(self, meta_key):
+        value = super().__getitem__(meta_key)
+        if callable(self.format):
+            value = self.format(value)
+        return value
+
+    def __setitem__(self, meta_key, value):
+        if callable(self.parse):
+            value = self.parse(value)
+        return super().__setitem__(meta_key, value)
+
+    def __repr__(self):
+        return 'GitAnnexParsedItem(key={!r}, file={!r}, ' \
+               'parse={!r}, format={!r})'.format(
+                self.key, self.file, self.parse, self.format)
+
+    @staticmethod
+    def collapsed_format(value):
+        if len(value) > 1:
+            value = '<{} values>'.format(len(value))
+        elif len(value) == 1:
+            value = value[0]
+        else:
+            value = None
+        return value
+
+    @staticmethod
+    def collapsed_parse(value):
+        pattern = '<\d+ values>'
+        if isinstance(value, str) and re.fullmatch(pattern, value):
+            raise ValueError('Can\'t infer values')
+        if not isinstance(value, list):
+            value = [value]
+        return value
+
+    @classmethod
+    def collapsed(cls, item):
+        return cls(item, cls.collapsed_parse, cls.collapsed_format)
+
+    @classmethod
+    def jsonized(cls, item):
+        return cls(item, json.loads, json.dumps)
+
+
 class GitAnnexKeysModel(QAbstractTableModel):
     def __init__(self, repo_path):
         super().__init__()
@@ -295,24 +351,14 @@ class GitAnnexKeysModel(QAbstractTableModel):
         row, column = index.row(), index.column()
         item = self.items[row]
         arg = self.headers[column][0]
-        value = item[arg]
 
         if role == Qt.UserRole:
-            return value
+            return item[arg]
         elif role == Qt.DisplayRole:
-            if isinstance(value, list):
-                if len(value) > 1:
-                    return '<{} values>'.format(len(value))
-                elif len(value) == 1:
-                    return value[0]
-                else:
-                    return None
-            return value
+            return GitAnnexParsedItem.collapsed(item)[arg]
         elif role == Qt.ToolTipRole:
-            if isinstance(value, list):
-                return json.dumps(value)
-            else:
-                return value
+            if len(item[arg]) > 1:
+                return GitAnnexParsedItem.jsonized(item)[arg]
 
     def headerData(self, column, orientation=None, role=None):
         if orientation != Qt.Horizontal:
@@ -412,29 +458,28 @@ class GitAnnexFilesModel(QAbstractItemModel):
         row, column = index.row(), index.column()
         item = index.internalPointer()
         arg = self.headers[column][0]
-        value = item[arg] if isinstance(item, GitAnnexItem) else item
+        value = None
+
+        if isinstance(item, GitAnnexItem):
+            if role == Qt.UserRole:
+                value = item[arg]
+            elif role == Qt.DisplayRole:
+                value = GitAnnexParsedItem.collapsed(item)[arg]
+            elif role == Qt.ToolTipRole:
+                if len(item[arg]) > 1:
+                    value = GitAnnexParsedItem.jsonized(item)[arg]
+        elif column == 0:
+            value = item
 
         if role == Qt.UserRole:
             return value
         elif role == Qt.DisplayRole:
-            if isinstance(value, list):
-                if len(value) > 1:
-                    return '<{} values>'.format(len(value))
-                elif len(value) == 1:
-                    if arg == 'file':
-                        return os.path.basename(value[0])
-                    else:
-                        return value[0]
-            elif index.column() == 0:
-                if arg == 'file':
-                    return os.path.basename(value)
-                else:
-                    return value
-        elif role == Qt.ToolTipRole:
-            if isinstance(value, list):
-                return json.dumps(value)
+            if arg == 'file':
+                return os.path.basename(value)
             else:
                 return value
+        elif role == Qt.ToolTipRole:
+            return value
 
     def headerData(self, column, orientation=None, role=None):
         if orientation != Qt.Horizontal:
