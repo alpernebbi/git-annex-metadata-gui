@@ -21,6 +21,7 @@ from PyQt5.QtWidgets import QTableView
 from PyQt5.QtWidgets import QFileDialog
 from PyQt5.QtWidgets import QTabWidget
 from PyQt5.QtWidgets import QHeaderView
+from PyQt5.QtWidgets import QFileIconProvider
 
 
 def main():
@@ -465,21 +466,28 @@ class GitAnnexFilesModel(QAbstractItemModel):
                 value = item[arg]
             elif role == Qt.DisplayRole:
                 value = GitAnnexParsedItem.collapsed(item)[arg]
+                if arg == 'file':
+                    value = os.path.basename(value)
             elif role == Qt.ToolTipRole:
                 if len(item[arg]) > 1:
                     value = GitAnnexParsedItem.jsonized(item)[arg]
-        elif column == 0:
-            value = item
+            elif role == Qt.DecorationRole:
+                if arg == 'file':
+                    icon_type = QFileIconProvider.File
+                    value = QFileIconProvider().icon(icon_type)
 
-        if role == Qt.UserRole:
-            return value
-        elif role == Qt.DisplayRole:
-            if arg == 'file':
-                return os.path.basename(value)
-            else:
-                return value
-        elif role == Qt.ToolTipRole:
-            return value
+        elif arg == 'file':
+            if role == Qt.UserRole:
+                value = item
+            elif role == Qt.DisplayRole:
+                value = os.path.basename(item)
+            elif role == Qt.ToolTipRole:
+                value = item
+            elif role == Qt.DecorationRole:
+                icon_type = QFileIconProvider.Folder
+                value = QFileIconProvider().icon(icon_type)
+
+        return value
 
     def headerData(self, column, orientation=None, role=None):
         if orientation != Qt.Horizontal:
