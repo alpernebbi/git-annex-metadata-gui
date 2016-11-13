@@ -471,6 +471,10 @@ class GitAnnexFilesModel(QAbstractItemModel):
             elif role == Qt.ToolTipRole:
                 if len(item[arg]) > 1:
                     value = GitAnnexParsedItem.jsonized(item)[arg]
+                elif arg == 'file':
+                    file = GitAnnexParsedItem.collapsed(item)[arg]
+                    if file != os.path.basename(file):
+                        value = file
             elif role == Qt.DecorationRole:
                 if arg == 'file':
                     icon_type = QFileIconProvider.File
