@@ -396,6 +396,11 @@ class GitAnnexKeysModel(QStandardItemModel):
         for item in items:
             self.appendRow([item.field(f) for f, _ in self.headers])
 
+    def flags(self, index):
+        item = self.itemFromIndex(index)
+        if isinstance(item, GitAnnexField):
+            return Qt.ItemIsEnabled | Qt.ItemIsSelectable
+
 
 class GitAnnexFilesModel(QStandardItemModel):
     def __init__(self, repo_path):
@@ -432,6 +437,13 @@ class GitAnnexFilesModel(QStandardItemModel):
             parent.appendRow(
                 [item.field(f) for f, _ in self.headers]
             )
+
+    def flags(self, index):
+        item = self.itemFromIndex(index)
+        if isinstance(item, GitAnnexDirectory):
+            return Qt.ItemIsEnabled
+        elif isinstance(item, GitAnnexField):
+            return Qt.ItemIsEnabled | Qt.ItemIsSelectable
 
 
 if __name__ == '__main__':
