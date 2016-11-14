@@ -74,7 +74,8 @@ class MainWindow(QMainWindow):
         self.view_tabs.addTab(self.files_view, 'Files')
 
         self.keys_view = QTableView()
-        self.keys_view .setSortingEnabled(True)
+        self.keys_view.setSortingEnabled(True)
+        self.keys_view.setSelectionBehavior(self.keys_view.SelectRows)
         self.view_tabs.addTab(self.keys_view, 'Keys')
 
         self.setCentralWidget(self.view_tabs)
