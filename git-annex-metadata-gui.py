@@ -383,12 +383,34 @@ class GitAnnexKeysModel(QAbstractTableModel):
             else:
                 return value
 
+        old_indices = {self.indexof(item): item for item in self.items}
+
         self.layoutAboutToBeChanged.emit()
-        self.items[:] = sorted(
+        self.items = sorted(
             self.items, key=sort_key,
             reverse=(sort_order == Qt.DescendingOrder),
         )
+
+        updates = {
+            old_index: self.indexof(item)
+            for old_index, item in old_indices.items()
+        }
+
+        col_count = self.columnCount(QModelIndex())
+        for old, new in updates.copy().items():
+            for col in range(col_count):
+                old_sibling, new_sibling = map(
+                    lambda i: i.sibling(i.row(), col),
+                    [old, new]
+                )
+                updates[old_sibling] = new_sibling
+
+        self.changePersistentIndexList(*zip(*updates.items()))
         self.layoutChanged.emit()
+
+    def indexof(self, item, col=0):
+            row = self.items.index(item)
+            return self.index(row, col, QModelIndex())
 
     def __repr__(self):
         return 'GitAnnexKeysModel(repo_path={!r}, items={!r})'.format(
