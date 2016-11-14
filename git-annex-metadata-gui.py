@@ -76,7 +76,7 @@ class MainWindow(QMainWindow):
         self.keys_view = QTableView()
         self.keys_view.setSortingEnabled(True)
         self.keys_view.setSelectionBehavior(self.keys_view.SelectRows)
-        self.view_tabs.addTab(self.keys_view, 'Keys')
+        self.view_tabs.addTab(self.keys_view, 'Absent Keys')
 
         self.setCentralWidget(self.view_tabs)
 
@@ -192,8 +192,13 @@ class GitAnnex:
         ).splitlines()
         return [json.loads(json_) for json_ in jsons]
 
-    def keys(self):
-        return {meta['key'] for meta in self.metadata(all=True)}
+    def keys(self, absent=False):
+        all_keys = {meta['key'] for meta in self.metadata(all=True)}
+        if absent:
+            file_keys = {meta['key'] for meta in self.metadata()}
+            return all_keys - file_keys
+        else:
+            return all_keys
 
     def files(self):
         return {meta['file'] for meta in self.metadata()}
@@ -393,7 +398,10 @@ class GitAnnexKeysModel(QStandardItemModel):
         self.headers.extend((name, name.title()) for name in fields)
         self.setHorizontalHeaderLabels(n for _, n in self.headers)
 
-        items = (self.annex.item(key=key) for key in self.annex.keys())
+        items = (
+            self.annex.item(key=key)
+            for key in self.annex.keys(absent=True)
+        )
         for item in items:
             self.appendRow([item.field(f) for f, _ in self.headers])
 
