@@ -530,7 +530,6 @@ class GitAnnexFilesModel(QAbstractItemModel):
 
         return hierarchy.pop()
 
-
     def sort(self, column, sort_order=Qt.AscendingOrder):
         arg = self.headers[column][0]
 
@@ -545,11 +544,32 @@ class GitAnnexFilesModel(QAbstractItemModel):
             else:
                 return 0, ''
 
+        old_indices = {
+            self.indexof(child): child
+            for parent in self.tree.parents()
+            for child in self.tree.children(parent)
+        }
+
         self.layoutAboutToBeChanged.emit()
         self.tree.sort(
             key=sort_key,
             reverse=(sort_order == Qt.DescendingOrder)
         )
+
+        updates = {
+            old_index: self.indexof(item)
+            for old_index, item in old_indices.items()
+        }
+        col_count = self.columnCount(QModelIndex())
+        for old, new in updates.copy().items():
+            for col in range(1, col_count):
+                old_sibling, new_sibling = map(
+                    lambda i: i.sibling(i.row(), col),
+                    [old, new]
+                )
+                updates[old_sibling] = new_sibling
+
+        self.changePersistentIndexList(*zip(*updates.items()))
         self.layoutChanged.emit()
 
     def __repr__(self):
