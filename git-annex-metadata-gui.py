@@ -316,6 +316,15 @@ class GitAnnexField(QStandardItem):
             value = [value]
         return value
 
+    def __lt__(self, other):
+        if isinstance(other, GitAnnexDirectory):
+            return False
+        else:
+            return super().__lt__(other)
+
+    def __ge__(self, other):
+        return not self.__lt__(other)
+
     def __repr__(self):
         return 'GitAnnexField(item={!r}, field={!r})'.format(
             self.item, self.field)
@@ -358,6 +367,15 @@ class GitAnnexDirectory(QStandardItem):
 
     def type(self):
         return self.qt_type
+
+    def __lt__(self, other):
+        if isinstance(other, GitAnnexField):
+            return False
+        else:
+            return super().__lt__(other)
+
+    def __ge__(self, other):
+        return not self.__lt__(other)
 
     def __repr__(self):
         return 'GitAnnexDirectory(path={!r}, field={!r})'.format(
