@@ -511,6 +511,26 @@ class GitAnnexFilesModel(QAbstractItemModel):
         else:
             return Qt.ItemIsEnabled
 
+    def indexof(self, item):
+        hierarchy = []
+        try:
+            while True:
+                parent = self.tree.parent(item)
+                row = self.tree.children(parent).index(item)
+                hierarchy.append((item, row))
+                item = parent
+        except KeyError:
+            hierarchy.append(QModelIndex())
+
+        while len(hierarchy) > 1:
+            parent = hierarchy.pop()
+            item, row = hierarchy.pop()
+            index = self.index(row, 0, parent)
+            hierarchy.append(index)
+
+        return hierarchy.pop()
+
+
     def sort(self, column, sort_order=Qt.AscendingOrder):
         arg = self.headers[column][0]
 
