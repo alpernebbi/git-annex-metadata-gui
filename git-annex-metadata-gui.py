@@ -377,6 +377,8 @@ class GitAnnexKeysModel(QAbstractTableModel):
             arg = self.headers[column][0]
             value = item[arg]
             if isinstance(value, list):
+                value[:] = [int(v) if v.isnumeric() else v
+                            for v in value]
                 return -len(value), (value[-1] if value else '')
             else:
                 return value
@@ -515,6 +517,8 @@ class GitAnnexFilesModel(QAbstractItemModel):
         def sort_key(item):
             if isinstance(item, GitAnnexItem):
                 value = item[arg]
+                value[:] = [int(v) if v.isnumeric() else v
+                            for v in value]
                 return -len(value), (value[-1] if value else '')
             elif item and arg == 'file':
                 return -1, item
