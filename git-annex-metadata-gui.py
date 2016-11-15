@@ -102,7 +102,6 @@ class MainWindow(QMainWindow):
 
     def create_docks(self):
         preview = QLabel()
-        preview.setAlignment(Qt.AlignVCenter | Qt.AlignLeft)
         preview.setTextFormat(Qt.PlainText)
         preview.setFont(
             QFontDatabase().systemFont(QFontDatabase.FixedFont)
@@ -231,12 +230,14 @@ class MainWindow(QMainWindow):
             with open(path) as file:
                 text = file.read()
                 preview.setText(text)
+            preview.setAlignment(Qt.AlignVCenter | Qt.AlignLeft)
 
         elif mime.startswith('image/'):
             pixmap = QPixmap(path)
             if not pixmap.isNull():
                 thumb = pixmap.scaled(500, 500, Qt.KeepAspectRatio)
                 preview.setPixmap(thumb)
+                preview.setAlignment(Qt.AlignCenter | Qt.AlignHCenter)
             else:
                 name = item.file or item.key
                 self.statusBar().showMessage(
