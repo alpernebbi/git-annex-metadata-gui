@@ -116,6 +116,9 @@ class MainWindow(QMainWindow):
         keys_view.setModel(self.models.keys)
         files_view.setModel(self.models.files)
 
+        if not self.models.keys.rowCount():
+            self.centralWidget().setTabEnabled(1, False)
+
         keys_header = keys_view.horizontalHeader()
         keys_header.setStretchLastSection(False)
         keys_header.setSectionResizeMode(0, QHeaderView.Fixed)
