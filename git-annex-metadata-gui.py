@@ -19,6 +19,8 @@ from PyQt5.QtWidgets import QFileDialog
 from PyQt5.QtWidgets import QTabWidget
 from PyQt5.QtWidgets import QHeaderView
 from PyQt5.QtWidgets import QFileIconProvider
+from PyQt5.QtWidgets import QDockWidget
+from PyQt5.QtWidgets import QLabel
 from PyQt5.QtGui import QStandardItem
 from PyQt5.QtGui import QStandardItemModel
 
@@ -43,10 +45,12 @@ class MainWindow(QMainWindow):
         self.menus = Namespace()
         self.models = Namespace()
         self.views = Namespace()
+        self.docks = Namespace()
 
         self.create_actions()
         self.create_menus()
         self.create_center_widget()
+        self.create_docks()
         self.create_statusbar()
 
     def create_actions(self):
@@ -74,6 +78,9 @@ class MainWindow(QMainWindow):
         header_menu.setDisabled(True)
         self.menus.header = header_menu
 
+        docks_menu = self.menuBar().addMenu('&Docks')
+        self.menus.docks = docks_menu
+
     def create_center_widget(self):
         tabs_widget = QTabWidget()
 
@@ -89,6 +96,26 @@ class MainWindow(QMainWindow):
         self.views.keys = keys_view
 
         self.setCentralWidget(tabs_widget)
+
+    def create_docks(self):
+        preview = QLabel()
+        preview.setAlignment(Qt.AlignCenter | Qt.AlignHCenter)
+        preview.setTextFormat(Qt.PlainText)
+
+        preview_dock = QDockWidget('Preview')
+        preview_dock.setAllowedAreas(
+            Qt.LeftDockWidgetArea
+            | Qt.RightDockWidgetArea
+        )
+        preview_dock.setFeatures(
+            QDockWidget.DockWidgetClosable
+            | QDockWidget.DockWidgetMovable
+        )
+        preview_dock.setWidget(preview)
+
+        self.addDockWidget(Qt.RightDockWidgetArea, preview_dock)
+        self.menus.docks.addAction(preview_dock.toggleViewAction())
+        self.docks.preview = preview_dock
 
     def create_statusbar(self):
         self.statusBar().showMessage('Ready')
@@ -131,6 +158,11 @@ class MainWindow(QMainWindow):
         files_header.resizeSections(QHeaderView.ResizeToContents)
         files_view.collapseAll()
 
+        keys_view.selectionModel() \
+            .selectionChanged.connect(self.update_preview)
+        files_view.selectionModel() \
+            .selectionChanged.connect(self.update_preview)
+
     def toggle_header_field(self, field, checked):
         keys_fields = list(zip(*self.models.keys.headers))[0]
         keys_field_index = keys_fields.index(field)
@@ -170,6 +202,16 @@ class MainWindow(QMainWindow):
                 action.trigger()
             header_menu.addAction(action)
         header_menu.setDisabled(False)
+
+    def update_preview(self, selection, _):
+        preview = self.docks.preview.widget()
+        indexes = selection.indexes()
+        if indexes:
+            index = indexes[0]
+            item = index.model().itemFromIndex(index).item
+            preview.setText(item.file or item.key)
+        else:
+            preview.setText('')
 
 
 class GitAnnex:
