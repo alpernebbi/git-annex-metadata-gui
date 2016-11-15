@@ -102,8 +102,11 @@ class MainWindow(QMainWindow):
 
     def create_docks(self):
         preview = QLabel()
-        preview.setAlignment(Qt.AlignCenter | Qt.AlignHCenter)
+        preview.setAlignment(Qt.AlignVCenter | Qt.AlignLeft)
         preview.setTextFormat(Qt.PlainText)
+        preview.setFont(
+            QFontDatabase().systemFont(QFontDatabase.FixedFont)
+        )
 
         preview_dock = QDockWidget('Preview')
         preview_dock.setAllowedAreas(
