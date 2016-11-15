@@ -164,6 +164,11 @@ class MainWindow(QMainWindow):
         files_header.resizeSections(QHeaderView.ResizeToContents)
         files_view.collapseAll()
 
+        key_length = keys_view.columnWidth(0)
+        keys_view.setMinimumWidth(key_length * 1.05)
+        file_length = files_view.columnWidth(0)
+        files_view.setMinimumWidth(file_length * 1.05)
+
         keys_view.selectionModel() \
             .selectionChanged.connect(self.update_preview)
         files_view.selectionModel() \
