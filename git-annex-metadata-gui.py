@@ -214,30 +214,47 @@ class MainWindow(QMainWindow):
             preview.setText('')
 
 
-class GitAnnex:
-    def __init__(self, repo_path):
-        self.repo_path = repo_path
+class Process():
+    def __init__(self, *batch_command, workdir=None):
+        self._command = batch_command
+        self._workdir = workdir
         self._process = self.start()
 
     def start(self):
         process = subprocess.Popen(
-            ["git", "annex", "metadata", "--batch", "--json"],
+            self._command,
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             universal_newlines=True,
-            cwd=self.repo_path,
+            cwd=self._workdir,
         )
         return process
 
-    def query(self, **query):
-        while not (self._process and self._process.poll() is None):
-            print('Restarting metadata...')
-            self._process = self.start()
+    def running(self):
+        return self._process and self._process.poll() is None
+
+    def query_json(self, **query):
         json_ = json.dumps(query)
-        print(json_, file=self._process.stdin, flush=True)
-        response = self._process.stdout.readline()
+        response = self.query_line(json_)
         return json.loads(response)
+
+    def query_line(self, query):
+        while not self.running():
+            self._process = self.start()
+        print(query, file=self._process.stdin, flush=True)
+        return self._process.stdout.readline()
+
+
+class GitAnnex:
+    def __init__(self, repo_path):
+        self.repo_path = repo_path
+
+        self.processes = Namespace()
+        self.processes.metadata = Process(
+            'git', 'annex', 'metadata', '--batch', '--json',
+            workdir=self.repo_path
+        )
 
     def metadata(self, all=False):
         jsons = subprocess.check_output(
@@ -270,7 +287,7 @@ class GitAnnex:
         if key:
             return GitAnnexFile(self, key, file=path)
         elif path:
-            key = self.query(file=path)['key']
+            key = self.processes.metadata.query_json(file=path)['key']
             return GitAnnexFile(self, key, file=path)
         else:
             raise ValueError('Requires path or key')
@@ -284,7 +301,10 @@ class GitAnnexFile(collections.abc.MutableMapping):
         self.key = key
         self.file = file
         self.annex = annex
-        self.query = partial(self.annex.query, key=key)
+        self.query = partial(
+            self.annex.processes.metadata.query_json,
+            key=key
+        )
 
     def _fields(self, **fields):
         if not fields:
