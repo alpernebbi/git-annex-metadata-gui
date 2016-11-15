@@ -7,6 +7,7 @@ import re
 import os
 import collections.abc
 from functools import partial
+from argparse import Namespace
 
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QApplication
@@ -38,55 +39,69 @@ class MainWindow(QMainWindow):
         self.resize(800, 600)
         self.setWindowTitle('Git Annex Metadata Editor')
 
+        self.actions = Namespace()
+        self.menus = Namespace()
+        self.models = Namespace()
+        self.views = Namespace()
+
         self.create_actions()
         self.create_menus()
         self.create_center_widget()
         self.create_statusbar()
 
     def create_actions(self):
-        self.open_action = QAction(
-            "Open...", self,
-            shortcut="Ctrl+O",
-            statusTip="Open an existing directory",
-            triggered=self.open_directory
-        )
+        open_action = QAction(self)
+        open_action.setText("Open...")
+        open_action.setShortcut(Qt.ControlModifier | Qt.Key_O)
+        open_action.setStatusTip("Open an existing directory")
+        open_action.triggered.connect(self.open_directory)
+        self.actions.open = open_action
 
-        self.exit_action = QAction(
-            "Exit", self,
-            shortcut="Ctrl+Q",
-            statusTip="Exit the application",
-            triggered=self.close,
-        )
+        exit_action = QAction(self)
+        exit_action.setText("Exit")
+        exit_action.setShortcut(Qt.ControlModifier | Qt.Key_Q)
+        exit_action.setStatusTip("Exit the application")
+        exit_action.triggered.connect(self.close)
+        self.actions.exit = exit_action
 
     def create_menus(self):
-        self.file_menu = self.menuBar().addMenu('&File')
-        self.file_menu.addAction(self.open_action)
-        self.file_menu.addAction(self.exit_action)
+        file_menu = self.menuBar().addMenu('&File')
+        file_menu.addAction(self.actions.open)
+        file_menu.addAction(self.actions.exit)
+        self.menus.file = file_menu
 
-        self.header_menu = self.menuBar().addMenu('&Header')
-        self.header_menu.setDisabled(True)
+        header_menu = self.menuBar().addMenu('&Header')
+        header_menu.setDisabled(True)
+        self.menus.header = header_menu
 
     def create_center_widget(self):
-        self.view_tabs = QTabWidget()
+        tabs_widget = QTabWidget()
 
-        self.files_view = QTreeView()
-        self.files_view.setSortingEnabled(True)
-        self.view_tabs.addTab(self.files_view, 'Files')
+        files_view = QTreeView()
+        files_view.setSortingEnabled(True)
+        tabs_widget.addTab(files_view, 'Files')
+        self.views.files = files_view
 
-        self.keys_view = QTableView()
-        self.keys_view.setSortingEnabled(True)
-        self.keys_view.setSelectionBehavior(self.keys_view.SelectRows)
-        self.view_tabs.addTab(self.keys_view, 'Absent Keys')
+        keys_view = QTableView()
+        keys_view.setSortingEnabled(True)
+        keys_view.setSelectionBehavior(keys_view.SelectRows)
+        tabs_widget.addTab(keys_view, 'Absent Keys')
+        self.views.keys = keys_view
 
-        self.setCentralWidget(self.view_tabs)
+        self.setCentralWidget(tabs_widget)
 
     def create_statusbar(self):
         self.statusBar().showMessage('Ready')
 
+    def open_directory(self):
+        dir_name = QFileDialog.getExistingDirectory(self)
+        if dir_name:
+            self.load_repository(dir_name)
+
     def load_repository(self, dir_name):
         try:
-            self.keys_model = GitAnnexKeysModel(dir_name)
-            self.files_model = GitAnnexFilesModel(dir_name)
+            self.models.keys = GitAnnexKeysModel(dir_name)
+            self.models.files = GitAnnexFilesModel(dir_name)
             self.refresh_views()
             self.populate_header_menu()
         except subprocess.CalledProcessError as err:
@@ -95,68 +110,63 @@ class MainWindow(QMainWindow):
             print(err)
 
     def refresh_views(self):
-        self.keys_view.setModel(self.keys_model)
-        self.files_view.setModel(self.files_model)
+        keys_view = self.views.keys
+        files_view = self.views.files
 
-        keys_head = self.keys_view.horizontalHeader()
-        keys_head.setStretchLastSection(False)
-        keys_head.setSectionResizeMode(0, QHeaderView.Fixed)
-        keys_head.resizeSections(QHeaderView.ResizeToContents)
+        keys_view.setModel(self.models.keys)
+        files_view.setModel(self.models.files)
 
-        files_head = self.files_view.header()
-        files_head.setStretchLastSection(False)
-        files_head.setSectionResizeMode(0, QHeaderView.Fixed)
-        self.files_view.expandAll()
-        files_head.resizeSections(QHeaderView.ResizeToContents)
-        self.files_view.collapseAll()
+        keys_header = keys_view.horizontalHeader()
+        keys_header.setStretchLastSection(False)
+        keys_header.setSectionResizeMode(0, QHeaderView.Fixed)
+        keys_header.resizeSections(QHeaderView.ResizeToContents)
+
+        files_header = files_view.header()
+        files_header.setStretchLastSection(False)
+        files_header.setSectionResizeMode(0, QHeaderView.Fixed)
+        files_view.expandAll()
+        files_header.resizeSections(QHeaderView.ResizeToContents)
+        files_view.collapseAll()
+
+    def toggle_header_field(self, field, checked):
+        keys_fields = list(zip(*self.models.keys.headers))[0]
+        keys_field_index = keys_fields.index(field)
+        keys_header = self.views.keys.horizontalHeader()
+        keys_header.setSectionHidden(keys_field_index, not checked)
+
+        files_fields = list(zip(*self.models.files.headers))[0]
+        files_field_index = files_fields.index(field)
+        files_header = self.views.files.header()
+        files_header.setSectionHidden(files_field_index, not checked)
+
+    def toggle_header_field_action(self, field, name):
+        action = QAction(self)
+        action.setText(name)
+        action.setCheckable(True)
+        action.setChecked(True)
+        action.triggered.connect(
+            partial(self.toggle_header_field, field)
+        )
+        return action
 
     def populate_header_menu(self):
-        self.header_menu.clear()
-
-        def toggle_field(field):
-            def func(checked):
-                keys_args = list(map(
-                    lambda x: x[0], self.keys_model.headers))
-                keys_index = list(keys_args).index(field)
-                keys_header = self.keys_view.horizontalHeader()
-                keys_header.setSectionHidden(keys_index, not checked)
-
-                files_args = list(map(
-                    lambda x: x[0], self.files_model.headers))
-                files_index = files_args.index(field)
-                files_header = self.files_view.header()
-                files_header.setSectionHidden(files_index, not checked)
-            return func
-
-        def toggle_field_action(arg, field):
-            action = QAction(
-                field, self,
-                triggered=toggle_field(arg),
-                checkable=True,
-            )
-            action.setChecked(True)
-            return action
+        header_menu = self.menus.header
+        header_menu.clear()
 
         default_fields = ['file', 'key']
-        file = self.files_model.headers[0]
-        key = self.keys_model.headers[0]
-        headers = self.files_model.headers[1:] \
-                  + self.keys_model.headers[1:]
-        headers = [file, key] + sorted(set(headers))
+        headers = sorted(
+            set(self.models.files.headers + self.models.keys.headers),
+            key=lambda f: (f[0] not in default_fields, f)
+        )
 
-        for arg, field in headers:
-            action = toggle_field_action(arg, field)
-            if arg in default_fields:
+        for field, name in headers:
+            action = self.toggle_header_field_action(field, name)
+            if field in default_fields:
                 action.setDisabled(True)
             else:
                 action.trigger()
-            self.header_menu.addAction(action)
-        self.header_menu.setDisabled(False)
-
-    def open_directory(self):
-        dir_name = QFileDialog.getExistingDirectory(self)
-        if dir_name:
-            self.load_repository(dir_name)
+            header_menu.addAction(action)
+        header_menu.setDisabled(False)
 
 
 class GitAnnex:
