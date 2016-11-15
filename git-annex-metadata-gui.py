@@ -11,6 +11,7 @@ from functools import partial
 from argparse import Namespace
 
 from PyQt5.QtCore import Qt
+from PyQt5.QtCore import QSize
 from PyQt5.QtWidgets import QApplication
 from PyQt5.QtWidgets import QMainWindow
 from PyQt5.QtWidgets import QAction
@@ -22,6 +23,8 @@ from PyQt5.QtWidgets import QHeaderView
 from PyQt5.QtWidgets import QFileIconProvider
 from PyQt5.QtWidgets import QDockWidget
 from PyQt5.QtWidgets import QLabel
+from PyQt5.QtWidgets import QScrollArea
+from PyQt5.QtWidgets import QSizePolicy
 from PyQt5.QtGui import QStandardItem
 from PyQt5.QtGui import QStandardItemModel
 from PyQt5.QtGui import QPixmap
@@ -106,6 +109,16 @@ class MainWindow(QMainWindow):
         preview.setFont(
             QFontDatabase().systemFont(QFontDatabase.FixedFont)
         )
+        preview.sizeHint = lambda *args: QSize(600, 600)
+        preview.setSizePolicy(
+            QSizePolicy.Expanding, QSizePolicy.Expanding
+        )
+
+        preview_area = QScrollArea()
+        preview_area.setWidgetResizable(True)
+        preview_area.setSizeAdjustPolicy(QScrollArea.AdjustToContents)
+        preview_area.setWidget(preview)
+        preview_area.setMinimumWidth(300)
 
         preview_dock = QDockWidget('Preview')
         preview_dock.setAllowedAreas(
@@ -116,7 +129,7 @@ class MainWindow(QMainWindow):
             QDockWidget.DockWidgetClosable
             | QDockWidget.DockWidgetMovable
         )
-        preview_dock.setWidget(preview)
+        preview_dock.setWidget(preview_area)
 
         self.addDockWidget(Qt.RightDockWidgetArea, preview_dock)
         self.menus.docks.addAction(preview_dock.toggleViewAction())
@@ -214,7 +227,9 @@ class MainWindow(QMainWindow):
         header_menu.setDisabled(False)
 
     def update_preview(self, selection, _):
-        preview = self.docks.preview.widget()
+        preview_dock = self.docks.preview
+        preview_area = preview_dock.widget()
+        preview = preview_area.widget()
         indexes = selection.indexes()
 
         if not indexes:
