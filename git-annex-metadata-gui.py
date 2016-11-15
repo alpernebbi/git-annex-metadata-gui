@@ -250,7 +250,11 @@ class MainWindow(QMainWindow):
         elif mime.startswith('image/'):
             pixmap = QPixmap(path)
             if not pixmap.isNull():
-                thumb = pixmap.scaled(500, 500, Qt.KeepAspectRatio)
+                thumb = pixmap.scaled(
+                    preview_area.width() * 0.95,
+                    preview_area.height() * 0.95,
+                    Qt.KeepAspectRatio,
+                )
                 preview.setPixmap(thumb)
                 preview.setAlignment(Qt.AlignCenter | Qt.AlignHCenter)
             else:
