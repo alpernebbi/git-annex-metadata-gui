@@ -243,7 +243,7 @@ class Process():
         while not self.running():
             self._process = self.start()
         print(query, file=self._process.stdin, flush=True)
-        return self._process.stdout.readline()
+        return self._process.stdout.readline().strip()
 
 
 class GitAnnex:
@@ -253,6 +253,10 @@ class GitAnnex:
         self.processes = Namespace()
         self.processes.metadata = Process(
             'git', 'annex', 'metadata', '--batch', '--json',
+            workdir=self.repo_path
+        )
+        self.processes.locate = Process(
+            'git', 'annex', 'contentlocation', '--batch',
             workdir=self.repo_path
         )
 
@@ -292,6 +296,13 @@ class GitAnnex:
         else:
             raise ValueError('Requires path or key')
 
+    def locate(self, key, abs=False):
+        rel_path = self.processes.locate.query_line(key)
+        if abs:
+            return os.path.join(self.repo_path, rel_path)
+        else:
+            return rel_path
+
     def __repr__(self):
         return 'GitAnnex(repo_path={!r})'.format(self.repo_path)
 
@@ -305,6 +316,7 @@ class GitAnnexFile(collections.abc.MutableMapping):
             self.annex.processes.metadata.query_json,
             key=key
         )
+        self.locate = partial(self.annex.locate, self.key)
 
     def _fields(self, **fields):
         if not fields:
