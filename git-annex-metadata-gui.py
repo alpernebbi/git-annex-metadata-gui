@@ -239,6 +239,7 @@ class MainWindow(QMainWindow):
                 preview.setPixmap(thumb)
                 preview.setAlignment(Qt.AlignCenter | Qt.AlignHCenter)
             else:
+                preview.clear()
                 name = item.file or item.key
                 self.statusBar().showMessage(
                     'Couldn\'t preview image {}'.format(name)
@@ -248,7 +249,7 @@ class MainWindow(QMainWindow):
             preview.clear()
 
 
-class Process():
+class Process:
     def __init__(self, *batch_command, workdir=None):
         self._command = batch_command
         self._workdir = workdir
