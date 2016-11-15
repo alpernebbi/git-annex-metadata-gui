@@ -25,6 +25,7 @@ from PyQt5.QtWidgets import QLabel
 from PyQt5.QtGui import QStandardItem
 from PyQt5.QtGui import QStandardItemModel
 from PyQt5.QtGui import QPixmap
+from PyQt5.QtGui import QFontDatabase
 
 
 def main():
@@ -411,6 +412,13 @@ class GitAnnexField(QStandardItem):
             if len(self.value) > 1:
                 return json.dumps(self.value)
 
+        elif role == Qt.FontRole:
+            fontdb = QFontDatabase()
+            if self.field == 'key':
+                return fontdb.systemFont(QFontDatabase.FixedFont)
+            else:
+                return fontdb.systemFont(QFontDatabase.GeneralFont)
+
     def type(self):
         return self.qt_type
 
@@ -470,6 +478,10 @@ class GitAnnexDirectory(QStandardItem):
         elif role == Qt.ToolTipRole:
             if self.path != os.path.basename(self.path):
                 return self.path
+
+        elif role == Qt.FontRole:
+            fontdb = QFontDatabase()
+            return fontdb.systemFont(QFontDatabase.GeneralFont)
 
     def column_data(self, role=Qt.DisplayRole, *args, **kwargs):
         parent_root = self.parent() or self.model().invisibleRootItem()
