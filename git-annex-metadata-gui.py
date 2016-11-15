@@ -6,6 +6,7 @@ import json
 import re
 import os
 import collections.abc
+import mimetypes
 from functools import partial
 from argparse import Namespace
 
@@ -23,6 +24,7 @@ from PyQt5.QtWidgets import QDockWidget
 from PyQt5.QtWidgets import QLabel
 from PyQt5.QtGui import QStandardItem
 from PyQt5.QtGui import QStandardItemModel
+from PyQt5.QtGui import QPixmap
 
 
 def main():
@@ -206,12 +208,34 @@ class MainWindow(QMainWindow):
     def update_preview(self, selection, _):
         preview = self.docks.preview.widget()
         indexes = selection.indexes()
-        if indexes:
-            index = indexes[0]
-            item = index.model().itemFromIndex(index).item
-            preview.setText(item.file or item.key)
+
+        if not indexes:
+            preview.clear()
+            return
+
+        index = indexes[0]
+        item = index.model().itemFromIndex(index).item
+        path = item.locate(abs=True)
+        mime = mimetypes.guess_type(path)[0] or ''
+
+        if mime.startswith('text/'):
+            with open(path) as file:
+                text = file.read()
+                preview.setText(text)
+
+        elif mime.startswith('image/'):
+            pixmap = QPixmap(path)
+            if not pixmap.isNull():
+                thumb = pixmap.scaled(500, 500, Qt.KeepAspectRatio)
+                preview.setPixmap(thumb)
+            else:
+                name = item.file or item.key
+                self.statusBar().showMessage(
+                    'Couldn\'t preview image {}'.format(name)
+                )
+
         else:
-            preview.setText('')
+            preview.clear()
 
 
 class Process():
