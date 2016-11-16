@@ -93,12 +93,12 @@ class MainWindow(QMainWindow):
     def create_center_widget(self):
         tabs_widget = QTabWidget()
 
-        files_view = QTreeView()
+        files_view = GitAnnexFilesView()
         files_view.setSortingEnabled(True)
         tabs_widget.addTab(files_view, 'Files')
         self.views.files = files_view
 
-        keys_view = QTableView()
+        keys_view = GitAnnexKeysView()
         keys_view.setSortingEnabled(True)
         keys_view.setSelectionBehavior(keys_view.SelectRows)
         tabs_widget.addTab(keys_view, 'Absent Keys')
@@ -146,38 +146,10 @@ class MainWindow(QMainWindow):
         if not self.models.keys.rowCount():
             self.centralWidget().setTabEnabled(1, False)
 
-        keys_header = keys_view.horizontalHeader()
-        keys_header.setStretchLastSection(False)
-        keys_header.setSectionResizeMode(0, QHeaderView.Fixed)
-        keys_header.resizeSections(QHeaderView.ResizeToContents)
-
-        files_header = files_view.header()
-        files_header.setStretchLastSection(False)
-        files_header.setSectionResizeMode(0, QHeaderView.Fixed)
-        files_view.expandAll()
-        files_header.resizeSections(QHeaderView.ResizeToContents)
-        files_view.collapseAll()
-
-        key_length = keys_view.columnWidth(0)
-        keys_view.setMinimumWidth(key_length * 1.05)
-        file_length = files_view.columnWidth(0)
-        files_view.setMinimumWidth(file_length * 1.05)
-
         keys_view.selectionModel() \
             .selectionChanged.connect(self.selection_updated)
         files_view.selectionModel() \
             .selectionChanged.connect(self.selection_updated)
-
-    def toggle_header_field(self, field, checked):
-        keys_fields = list(zip(*self.models.keys.headers))[0]
-        keys_field_index = keys_fields.index(field)
-        keys_header = self.views.keys.horizontalHeader()
-        keys_header.setSectionHidden(keys_field_index, not checked)
-
-        files_fields = list(zip(*self.models.files.headers))[0]
-        files_field_index = files_fields.index(field)
-        files_header = self.views.files.header()
-        files_header.setSectionHidden(files_field_index, not checked)
 
     def toggle_header_field_action(self, field, name):
         action = QAction(self)
@@ -185,7 +157,10 @@ class MainWindow(QMainWindow):
         action.setCheckable(True)
         action.setChecked(True)
         action.triggered.connect(
-            partial(self.toggle_header_field, field)
+            partial(self.views.keys.toggle_header_field, field)
+        )
+        action.triggered.connect(
+            partial(self.views.files.toggle_header_field, field)
         )
         return action
 
@@ -217,6 +192,58 @@ class MainWindow(QMainWindow):
         item = index.model().itemFromIndex(index).item
         self.docks.preview.set_item(item)
         self.docks.editor.set_item(item)
+
+
+class GitAnnexKeysView(QTableView):
+    def __init__(self):
+        super().__init__()
+
+        self.setSortingEnabled(True)
+        self.setSelectionBehavior(self.SelectRows)
+
+    def setModel(self, model):
+        super().setModel(model)
+
+        header = self.horizontalHeader()
+        header.setStretchLastSection(False)
+        header.setSectionResizeMode(0, QHeaderView.Fixed)
+        header.resizeSections(QHeaderView.ResizeToContents)
+
+        max_key_length = self.columnWidth(0)
+        self.setMinimumWidth(max_key_length * 1.05)
+
+    def toggle_header_field(self, field, visible):
+        fields = list(zip(*self.model().headers))[0]
+        field_index = fields.index(field)
+        header = self.horizontalHeader()
+        header.setSectionHidden(field_index, not visible)
+
+
+class GitAnnexFilesView(QTreeView):
+    def __init__(self):
+        super().__init__()
+
+        self.setSortingEnabled(True)
+        self.setSelectionBehavior(self.SelectRows)
+
+    def setModel(self, model):
+        super().setModel(model)
+
+        self.expandAll()
+        header = self.header()
+        header.setStretchLastSection(False)
+        header.setSectionResizeMode(0, QHeaderView.Fixed)
+        header.resizeSections(QHeaderView.ResizeToContents)
+        self.collapseAll()
+
+        max_file_length = self.columnWidth(0)
+        self.setMinimumWidth(max_file_length * 1.05)
+
+    def toggle_header_field(self, field, visible):
+        fields = list(zip(*self.model().headers))[0]
+        field_index = fields.index(field)
+        header = self.header()
+        header.setSectionHidden(field_index, not visible)
 
 
 class PreviewDock(QDockWidget):
