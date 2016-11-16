@@ -30,6 +30,7 @@ from PyQt5.QtWidgets import QFormLayout
 from PyQt5.QtWidgets import QHBoxLayout
 from PyQt5.QtWidgets import QWidget
 from PyQt5.QtWidgets import QLineEdit
+from PyQt5.QtWidgets import QPushButton
 from PyQt5.QtGui import QStandardItem
 from PyQt5.QtGui import QStandardItemModel
 from PyQt5.QtGui import QPixmap
@@ -367,7 +368,16 @@ class MetadataEditorDock(QDockWidget):
                 self.data_changed_handler
             )
 
+            append_button = self.create_append_button()
+            self.addWidget(append_button)
             self.data_changed_handler()
+
+        def create_append_button(self):
+            button = MetadataEditorDock.AppendButton()
+            button.clicked.connect(
+                partial(self.clicked_handler, button)
+            )
+            return button
 
         def create_widget(self):
             widget = MetadataEditorDock.EditField()
@@ -376,15 +386,18 @@ class MetadataEditorDock(QDockWidget):
             )
             return widget
 
+        def widget_count(self):
+            return self.count() - 1
+
         def make_widgets(self, length):
-            while self.count() > length:
-                child = self.takeAt(self.count() - 1)
+            while self.widget_count() > length:
+                child = self.takeAt(0)
                 widget = child.widget()
                 widget.deleteLater()
 
-            while self.count() < length:
+            while self.widget_count() < length:
                 widget = self.create_widget()
-                self.addWidget(widget)
+                self.insertWidget(self.widget_count(), widget)
 
         def data_changed_handler(self, model_index=QModelIndex()):
             if model_index.isValid():
@@ -394,7 +407,7 @@ class MetadataEditorDock(QDockWidget):
             values = self._item.data(Qt.UserRole)
             self.make_widgets(len(values))
 
-            for index in range(self.count()):
+            for index in range(self.widget_count()):
                 widget = self.itemAt(index).widget()
                 widget.setText(values[index])
 
@@ -403,10 +416,24 @@ class MetadataEditorDock(QDockWidget):
             index = self.indexOf(widget)
             value = widget.text()
             if value:
-                values[index] = value
+                if index == len(values):
+                    values.append(value)
+                elif index < len(values):
+                    values[index] = value
             else:
                 del values[index]
+            widget.clearFocus()
             self._item.setData(values, Qt.UserRole)
+
+        def clicked_handler(self, button):
+            widget_count = self.widget_count()
+            last_widget = self.itemAt(widget_count - 1).widget()
+            if last_widget.text():
+                self.make_widgets(widget_count + 1)
+                new_widget = self.itemAt(widget_count).widget()
+                new_widget.setFocus()
+            else:
+                last_widget.setFocus()
 
     class EditField(QLineEdit):
         def __init__(self):
@@ -425,6 +452,12 @@ class MetadataEditorDock(QDockWidget):
             if not self.isVisible():
                 min_width += 26
             return QSize(text_width + min_width, height)
+
+    class AppendButton(QPushButton):
+        def __init__(self):
+            super().__init__()
+            self.setText('+')
+            self.setMaximumWidth(32)
 
     class Layout(QFormLayout):
         def __init__(self):
