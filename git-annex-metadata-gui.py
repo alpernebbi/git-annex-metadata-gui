@@ -366,10 +366,16 @@ class MetadataEditorDock(QDockWidget):
             self.returnPressed.connect(self.new_value)
             self.textChanged.connect(self.adjustSize)
             self.setAlignment(Qt.AlignCenter)
+            self._item.model().dataChanged.connect(self.data_changed)
 
         def new_value(self, *args, **kwargs):
             self._item.setData(self.text(), Qt.EditRole)
             self.setText(self._item.data(Qt.EditRole))
+
+        def data_changed(self, index):
+            item = index.model().itemFromIndex(index)
+            if item == self._item:
+                self.setText(self._item.data(Qt.EditRole))
 
         def sizeHint(self):
             height = super().sizeHint().height()
@@ -531,6 +537,7 @@ class GitAnnexFile(collections.abc.MutableMapping):
             key=key
         )
         self.locate = partial(self.annex.locate, self.key)
+        self.field_items = {}
 
     def _fields(self, **fields):
         if not fields:
@@ -547,7 +554,9 @@ class GitAnnexFile(collections.abc.MutableMapping):
         return new_fields
 
     def field(self, field):
-        return GitAnnexField(self, field)
+        if field not in self.field_items:
+            self.field_items[field] = GitAnnexField(self, field)
+        return self.field_items[field]
 
     def __getitem__(self, meta_key):
         if meta_key == 'key':
