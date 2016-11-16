@@ -107,50 +107,12 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(tabs_widget)
 
     def create_docks(self):
-        preview = QLabel()
-        preview.setTextFormat(Qt.PlainText)
-        preview.setFont(
-            QFontDatabase().systemFont(QFontDatabase.FixedFont)
-        )
-        preview.sizeHint = lambda *args: QSize(600, 600)
-        preview.setSizePolicy(
-            QSizePolicy.Expanding, QSizePolicy.Expanding
-        )
-
-        preview_area = QScrollArea()
-        preview_area.setWidgetResizable(True)
-        preview_area.setSizeAdjustPolicy(QScrollArea.AdjustToContents)
-        preview_area.setWidget(preview)
-        preview_area.setMinimumWidth(300)
-
-        preview_dock = QDockWidget('Preview')
-        preview_dock.setAllowedAreas(
-            Qt.LeftDockWidgetArea
-            | Qt.RightDockWidgetArea
-        )
-        preview_dock.setFeatures(
-            QDockWidget.DockWidgetClosable
-            | QDockWidget.DockWidgetMovable
-        )
-        preview_dock.setWidget(preview_area)
-
+        preview_dock = PreviewDock()
         self.addDockWidget(Qt.RightDockWidgetArea, preview_dock)
         self.menus.docks.addAction(preview_dock.toggleViewAction())
         self.docks.preview = preview_dock
 
-        editor = QWidget()
-        editor_layout = QFormLayout()
-        editor.setLayout(editor_layout)
-
-        editor.layout().addRow('File', QLabel('None'))
-        editor_dock = QDockWidget('Metadata Editor')
-        editor_dock.setAllowedAreas(Qt.BottomDockWidgetArea)
-        editor_dock.setFeatures(
-            QDockWidget.DockWidgetClosable
-            | QDockWidget.DockWidgetMovable
-        )
-        editor_dock.setWidget(editor)
-
+        editor_dock = MetadataEditorDock()
         self.addDockWidget(Qt.BottomDockWidgetArea, editor_dock)
         self.menus.docks.addAction(editor_dock.toggleViewAction())
         self.docks.editor = editor_dock
@@ -253,13 +215,29 @@ class MainWindow(QMainWindow):
 
         index = indexes[0]
         item = index.model().itemFromIndex(index).item
-        self.update_preview(item)
-        self.update_editor(item)
+        self.docks.preview.set_item(item)
+        self.docks.editor.set_item(item)
 
-    def update_preview(self, item):
-        preview_dock = self.docks.preview
-        preview_area = preview_dock.widget()
-        preview = preview_area.widget()
+
+class PreviewDock(QDockWidget):
+    def __init__(self):
+        super().__init__('File Preview')
+        self._area = PreviewDock.ScrollArea()
+        self._item = None
+
+        self.setAllowedAreas(
+            Qt.LeftDockWidgetArea
+            | Qt.RightDockWidgetArea
+        )
+        self.setFeatures(
+            QDockWidget.DockWidgetClosable
+            | QDockWidget.DockWidgetMovable
+        )
+        self.setWidget(self._area)
+
+    def set_item(self, item):
+        self._item = item
+        preview = self._area.widget()
 
         path = item.locate(abs=True)
         mime = mimetypes.guess_type(path)[0] or ''
@@ -267,15 +245,15 @@ class MainWindow(QMainWindow):
         if mime.startswith('text/'):
             with open(path) as file:
                 text = file.read()
-                preview.setText(text)
+            preview.setText(text)
             preview.setAlignment(Qt.AlignVCenter | Qt.AlignLeft)
 
         elif mime.startswith('image/'):
             pixmap = QPixmap(path)
             if not pixmap.isNull():
                 thumb = pixmap.scaled(
-                    preview_area.width() * 0.95,
-                    preview_area.height() * 0.95,
+                    self._area.width() * 0.95,
+                    self._area.height() * 0.95,
                     Qt.KeepAspectRatio,
                 )
                 preview.setPixmap(thumb)
@@ -290,12 +268,46 @@ class MainWindow(QMainWindow):
         else:
             preview.clear()
 
-    def update_editor(self, item):
-        editor_dock = self.docks.editor
-        editor = editor_dock.widget()
-        editor_layout = editor.layout()
+    class ScrollArea(QScrollArea):
+        def __init__(self):
+            super().__init__()
+            self._label = PreviewDock.Label()
+            self.setWidget(self._label)
 
-        self.clear_layout(editor_layout)
+            self.setWidgetResizable(True)
+            self.setSizeAdjustPolicy(QScrollArea.AdjustToContents)
+            self.setMinimumWidth(300)
+
+    class Label(QLabel):
+        def __init__(self):
+            super().__init__()
+            self.setTextFormat(Qt.PlainText)
+            self.setFont(
+                QFontDatabase().systemFont(QFontDatabase.FixedFont)
+            )
+            self.setSizePolicy(
+                QSizePolicy.Expanding, QSizePolicy.Expanding
+            )
+
+        def sizeHint(self):
+            return QSize(600, 600)
+
+
+class MetadataEditorDock(QDockWidget):
+    def __init__(self):
+        super().__init__('Metadata Editor')
+        self._widget = MetadataEditorDock.Widget()
+        self.setWidget(self._widget)
+
+        self.setAllowedAreas(Qt.BottomDockWidgetArea)
+        self.setFeatures(
+            QDockWidget.DockWidgetClosable
+            | QDockWidget.DockWidgetMovable
+        )
+
+    def set_item(self, item):
+        editor_layout = self._widget.layout()
+        editor_layout.clear()
 
         editor_layout.addRow('File:', QLabel(item.file or item.key))
         for field, value in item.items():
@@ -305,14 +317,26 @@ class MainWindow(QMainWindow):
             field_label = '{}: '.format(field.title())
             editor_layout.addRow(field_label, value_layout)
 
-    def clear_layout(self, layout):
-        while layout and layout.count():
-            child = layout.takeAt(0)
-            widget = child.widget()
-            if widget:
-                widget.deleteLater()
-            else:
-                self.clear_layout(child.layout())
+    class Layout(QFormLayout):
+        def __init__(self):
+            super().__init__()
+
+        def clear(self, sublayout=None):
+            if sublayout:
+                MetadataEditorDock.Layout.clear(sublayout)
+            while self.count():
+                child = self.takeAt(0)
+                widget = child.widget()
+                if widget:
+                    widget.deleteLater()
+                else:
+                    self.clear(child.layout())
+
+    class Widget(QWidget):
+        def __init__(self):
+            super().__init__()
+            self._layout = MetadataEditorDock.Layout()
+            self.setLayout(self._layout)
 
 
 class Process:
