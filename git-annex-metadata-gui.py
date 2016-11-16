@@ -603,6 +603,7 @@ class GitAnnexField(QStandardItem):
     @value.setter
     def value(self, value):
         self.item[self.field] = value
+        self.emitDataChanged()
 
     def data(self, role=Qt.DisplayRole, *args, **kwargs):
         if role == Qt.DisplayRole:
@@ -632,10 +633,15 @@ class GitAnnexField(QStandardItem):
             else:
                 return fontdb.systemFont(QFontDatabase.GeneralFont)
 
-    def setData(self, json_value, role=Qt.DisplayRole, *args, **kwargs):
+        elif role == Qt.UserRole:
+            return self.value
+
+    def setData(self, value, role=Qt.DisplayRole, *args, **kwargs):
         if role == Qt.EditRole:
-            self.value = json.loads(json_value)
-            self.emitDataChanged()
+            self.value = json.loads(value)
+
+        elif role == Qt.UserRole:
+            self.value = value
 
     def type(self):
         return self.qt_type
