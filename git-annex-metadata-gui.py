@@ -58,6 +58,7 @@ class MainWindow(QMainWindow):
 
         self.create_actions()
         self.create_menus()
+        self.create_views()
         self.create_center_widget()
         self.create_docks()
         self.create_statusbar()
@@ -90,20 +91,14 @@ class MainWindow(QMainWindow):
         docks_menu = self.menuBar().addMenu('&Docks')
         self.menus.docks = docks_menu
 
+    def create_views(self):
+        self.views.files = GitAnnexFilesView()
+        self.views.keys = GitAnnexKeysView()
+
     def create_center_widget(self):
         tabs_widget = QTabWidget()
-
-        files_view = GitAnnexFilesView()
-        files_view.setSortingEnabled(True)
-        tabs_widget.addTab(files_view, 'Files')
-        self.views.files = files_view
-
-        keys_view = GitAnnexKeysView()
-        keys_view.setSortingEnabled(True)
-        keys_view.setSelectionBehavior(keys_view.SelectRows)
-        tabs_widget.addTab(keys_view, 'Absent Keys')
-        self.views.keys = keys_view
-
+        tabs_widget.addTab(self.views.files, 'Files')
+        tabs_widget.addTab(self.views.keys, 'Absent Keys')
         self.setCentralWidget(tabs_widget)
 
     def create_docks(self):
