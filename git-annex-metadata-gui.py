@@ -411,6 +411,21 @@ class Process:
     def running(self):
         return self._process and self._process.poll() is None
 
+    def terminate(self, kill=False):
+        self._process.terminate()
+        try:
+            self._process.wait(5)
+        except subprocess.TimeoutExpired:
+            if kill:
+                self._process.kill()
+            else:
+                raise
+
+    def restart(self):
+        if self.running():
+            self.terminate()
+            self._process = self.start()
+
     def query_json(self, **query):
         json_ = json.dumps(query)
         response = self.query_line(json_)
@@ -508,9 +523,17 @@ class GitAnnexFile(collections.abc.MutableMapping):
 
     def _fields(self, **fields):
         if not fields:
-            return self.query()['fields']
+            new_fields = self.query()['fields']
         else:
-            return self.query(fields=fields)['fields']
+            new_fields = self.query(fields=fields)['fields']
+
+        for field, value in fields.items():
+            new_value = new_fields.get(field, [])
+            if set(new_value) != set(value):
+                self.annex.processes.metadata.restart()
+                self._fields(**fields)
+
+        return new_fields
 
     def field(self, field):
         return GitAnnexField(self, field)
