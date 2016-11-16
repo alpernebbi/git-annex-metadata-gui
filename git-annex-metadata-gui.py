@@ -25,6 +25,9 @@ from PyQt5.QtWidgets import QDockWidget
 from PyQt5.QtWidgets import QLabel
 from PyQt5.QtWidgets import QScrollArea
 from PyQt5.QtWidgets import QSizePolicy
+from PyQt5.QtWidgets import QFormLayout
+from PyQt5.QtWidgets import QHBoxLayout
+from PyQt5.QtWidgets import QWidget
 from PyQt5.QtGui import QStandardItem
 from PyQt5.QtGui import QStandardItemModel
 from PyQt5.QtGui import QPixmap
@@ -135,6 +138,23 @@ class MainWindow(QMainWindow):
         self.menus.docks.addAction(preview_dock.toggleViewAction())
         self.docks.preview = preview_dock
 
+        editor = QWidget()
+        editor_layout = QFormLayout()
+        editor.setLayout(editor_layout)
+
+        editor.layout().addRow('File', QLabel('None'))
+        editor_dock = QDockWidget('Metadata Editor')
+        editor_dock.setAllowedAreas(Qt.BottomDockWidgetArea)
+        editor_dock.setFeatures(
+            QDockWidget.DockWidgetClosable
+            | QDockWidget.DockWidgetMovable
+        )
+        editor_dock.setWidget(editor)
+
+        self.addDockWidget(Qt.BottomDockWidgetArea, editor_dock)
+        self.menus.docks.addAction(editor_dock.toggleViewAction())
+        self.docks.editor = editor_dock
+
     def create_statusbar(self):
         self.statusBar().showMessage('Ready')
 
@@ -182,9 +202,9 @@ class MainWindow(QMainWindow):
         files_view.setMinimumWidth(file_length * 1.05)
 
         keys_view.selectionModel() \
-            .selectionChanged.connect(self.update_preview)
+            .selectionChanged.connect(self.selection_updated)
         files_view.selectionModel() \
-            .selectionChanged.connect(self.update_preview)
+            .selectionChanged.connect(self.selection_updated)
 
     def toggle_header_field(self, field, checked):
         keys_fields = list(zip(*self.models.keys.headers))[0]
@@ -226,18 +246,21 @@ class MainWindow(QMainWindow):
             header_menu.addAction(action)
         header_menu.setDisabled(False)
 
-    def update_preview(self, selection, _):
-        preview_dock = self.docks.preview
-        preview_area = preview_dock.widget()
-        preview = preview_area.widget()
-        indexes = selection.indexes()
-
+    def selection_updated(self, selected, deselected):
+        indexes = selected.indexes()
         if not indexes:
-            preview.clear()
             return
 
         index = indexes[0]
         item = index.model().itemFromIndex(index).item
+        self.update_preview(item)
+        self.update_editor(item)
+
+    def update_preview(self, item):
+        preview_dock = self.docks.preview
+        preview_area = preview_dock.widget()
+        preview = preview_area.widget()
+
         path = item.locate(abs=True)
         mime = mimetypes.guess_type(path)[0] or ''
 
@@ -266,6 +289,30 @@ class MainWindow(QMainWindow):
 
         else:
             preview.clear()
+
+    def update_editor(self, item):
+        editor_dock = self.docks.editor
+        editor = editor_dock.widget()
+        editor_layout = editor.layout()
+
+        self.clear_layout(editor_layout)
+
+        editor_layout.addRow('File:', QLabel(item.file or item.key))
+        for field, value in item.items():
+            value_layout = QHBoxLayout()
+            for value in value:
+                value_layout.addWidget(QLabel(value))
+            field_label = '{}: '.format(field.title())
+            editor_layout.addRow(field_label, value_layout)
+
+    def clear_layout(self, layout):
+        while layout and layout.count():
+            child = layout.takeAt(0)
+            widget = child.widget()
+            if widget:
+                widget.deleteLater()
+            else:
+                self.clear_layout(child.layout())
 
 
 class Process:
