@@ -28,6 +28,7 @@ from PyQt5.QtWidgets import QSizePolicy
 from PyQt5.QtWidgets import QFormLayout
 from PyQt5.QtWidgets import QHBoxLayout
 from PyQt5.QtWidgets import QWidget
+from PyQt5.QtWidgets import QLineEdit
 from PyQt5.QtGui import QStandardItem
 from PyQt5.QtGui import QStandardItemModel
 from PyQt5.QtGui import QPixmap
@@ -351,12 +352,22 @@ class MetadataEditorDock(QDockWidget):
         editor_layout.clear()
 
         editor_layout.addRow('File:', QLabel(item.file or item.key))
-        for field, value in item.items():
-            value_layout = QHBoxLayout()
-            for value in value:
-                value_layout.addWidget(QLabel(value))
+        for field in item:
+            field_item = item.field(field)
+            widget = MetadataEditorDock.EditField(field_item)
             field_label = '{}: '.format(field.title())
-            editor_layout.addRow(field_label, value_layout)
+            editor_layout.addRow(field_label, widget)
+
+    class EditField(QLineEdit):
+        def __init__(self, field_item):
+            super().__init__()
+            self._item = field_item
+            self.setText(self._item.data(Qt.EditRole))
+            self.returnPressed.connect(self.new_value)
+
+        def new_value(self, *args, **kwargs):
+            self._item.setData(self.text(), Qt.EditRole)
+            self.setText(self._item.data(Qt.EditRole))
 
     class Layout(QFormLayout):
         def __init__(self):
@@ -546,6 +557,10 @@ class GitAnnexField(QStandardItem):
     def value(self):
         return self.item[self.field]
 
+    @value.setter
+    def value(self, value):
+        self.item[self.field] = value
+
     def data(self, role=Qt.DisplayRole, *args, **kwargs):
         if role == Qt.DisplayRole:
             value = self.collapsed_format(self.value)
@@ -564,12 +579,20 @@ class GitAnnexField(QStandardItem):
             if len(self.value) > 1:
                 return json.dumps(self.value)
 
+        elif role == Qt.EditRole:
+            return json.dumps(self.value)
+
         elif role == Qt.FontRole:
             fontdb = QFontDatabase()
             if self.field == 'key':
                 return fontdb.systemFont(QFontDatabase.FixedFont)
             else:
                 return fontdb.systemFont(QFontDatabase.GeneralFont)
+
+    def setData(self, json_value, role=Qt.DisplayRole, *args, **kwargs):
+        if role == Qt.EditRole:
+            self.value = json.loads(json_value)
+            self.emitDataChanged()
 
     def type(self):
         return self.qt_type
