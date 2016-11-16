@@ -364,14 +364,25 @@ class MetadataEditorDock(QDockWidget):
             self._item = field_item
             self.setText(self._item.data(Qt.EditRole))
             self.returnPressed.connect(self.new_value)
+            self.textChanged.connect(self.adjustSize)
+            self.setAlignment(Qt.AlignCenter)
 
         def new_value(self, *args, **kwargs):
             self._item.setData(self.text(), Qt.EditRole)
             self.setText(self._item.data(Qt.EditRole))
 
+        def sizeHint(self):
+            height = super().sizeHint().height()
+            min_width = self.minimumSizeHint().width()
+            text_width = self.fontMetrics().size(
+                Qt.TextSingleLine, self.text()
+            ).width()
+            return QSize(text_width + min_width, height)
+
     class Layout(QFormLayout):
         def __init__(self):
             super().__init__()
+            self.setFieldGrowthPolicy(QFormLayout.FieldsStayAtSizeHint)
 
         def clear(self, sublayout=None):
             if sublayout:
