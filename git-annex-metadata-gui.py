@@ -740,7 +740,13 @@ class GitAnnexKeysModel(QStandardItemModel):
     def flags(self, index):
         item = self.itemFromIndex(index)
         if isinstance(item, GitAnnexField):
-            return Qt.ItemIsEnabled | Qt.ItemIsSelectable
+            if item.field == 'key':
+                return Qt.ItemIsEnabled \
+                       | Qt.ItemIsSelectable
+            else:
+                return Qt.ItemIsEnabled \
+                       | Qt.ItemIsSelectable \
+                       | Qt.ItemIsEditable
 
 
 class GitAnnexFilesModel(QStandardItemModel):
@@ -784,7 +790,13 @@ class GitAnnexFilesModel(QStandardItemModel):
         if isinstance(item, GitAnnexDirectory):
             return Qt.ItemIsEnabled
         elif isinstance(item, GitAnnexField):
-            return Qt.ItemIsEnabled | Qt.ItemIsSelectable
+            if item.field == 'file':
+                return Qt.ItemIsEnabled \
+                       | Qt.ItemIsSelectable
+            else:
+                return Qt.ItemIsEnabled \
+                       | Qt.ItemIsSelectable \
+                       | Qt.ItemIsEditable
 
 
 if __name__ == '__main__':
