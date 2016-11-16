@@ -123,12 +123,27 @@ class MainWindow(QMainWindow):
     def load_repository(self, dir_name):
         try:
             self.models.keys = GitAnnexKeysModel(dir_name)
+        except subprocess.CalledProcessError as err:
+            print(err.stderr)
+            if 'Not a git repository' in err.stderr:
+                msg = "{} isn't in a git repository."
+            elif 'First run: git-annex init' in err.stderr:
+                msg = "{} isn't in a git-annex repository."
+            elif 'not found' in err.stderr:
+                msg = "{} doesn't have any annexed files."
+            else:
+                raise
+            self.statusBar().showMessage(msg.format(dir_name))
+            return
+
+        try:
             self.models.files = GitAnnexFilesModel(dir_name)
         except subprocess.CalledProcessError as err:
-            msg = 'Couldn\'t load "{}" as a git-annex repo'
+            if 'not found' in err.stderr:
+                msg = "{} doesn't have any annexed files in work tree."
+            else:
+                raise
             self.statusBar().showMessage(msg.format(dir_name))
-            print(err)
-            return
 
         self.refresh_views()
         self.populate_header_menu()
@@ -140,8 +155,10 @@ class MainWindow(QMainWindow):
         keys_view.setModel(self.models.keys)
         files_view.setModel(self.models.files)
 
-        if not self.models.keys.rowCount():
-            self.centralWidget().setTabEnabled(1, False)
+        self.centralWidget() \
+            .setTabEnabled(0, self.models.files.rowCount())
+        self.centralWidget() \
+            .setTabEnabled(1, self.models.keys.rowCount())
 
         keys_view.selectionModel() \
             .selectionChanged.connect(self.selection_updated)
@@ -400,6 +417,7 @@ class GitAnnex:
         self.repo_path = subprocess.check_output(
             ('git', 'rev-parse', '--show-toplevel'),
             universal_newlines=True, cwd=path,
+            stderr=subprocess.PIPE,
         ).strip()
 
         self.processes = Namespace()
@@ -417,19 +435,26 @@ class GitAnnex:
             ('git', 'annex', 'metadata', '--json',
              '--all' if all else ''),
             universal_newlines=True, cwd=self.repo_path,
+            stderr=subprocess.PIPE,
         ).splitlines()
         return [json.loads(json_) for json_ in jsons]
 
     def keys(self, absent=False):
         all_keys = {meta['key'] for meta in self.metadata(all=True)}
         if absent:
-            file_keys = {meta['key'] for meta in self.metadata()}
-            return all_keys - file_keys
+            try:
+                file_keys = {meta['key'] for meta in self.metadata()}
+                return all_keys - file_keys
+            except subprocess.CalledProcessError:
+                return all_keys
         else:
             return all_keys
 
     def files(self):
-        return {meta['file'] for meta in self.metadata()}
+        try:
+            return {meta['file'] for meta in self.metadata()}
+        except subprocess.CalledProcessError:
+            return {}
 
     def fields(self):
         metadata = self.metadata(all=True)
