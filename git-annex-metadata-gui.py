@@ -396,8 +396,11 @@ class Process:
 
 
 class GitAnnex:
-    def __init__(self, repo_path):
-        self.repo_path = repo_path
+    def __init__(self, path):
+        self.repo_path = subprocess.check_output(
+            ('git', 'rev-parse', '--show-toplevel'),
+            universal_newlines=True, cwd=path,
+        ).strip()
 
         self.processes = Namespace()
         self.processes.metadata = Process(
