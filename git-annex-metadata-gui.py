@@ -12,6 +12,7 @@ from argparse import Namespace
 
 from PyQt5.QtCore import Qt
 from PyQt5.QtCore import QSize
+from PyQt5.QtCore import QModelIndex
 from PyQt5.QtWidgets import QApplication
 from PyQt5.QtWidgets import QMainWindow
 from PyQt5.QtWidgets import QAction
@@ -354,28 +355,66 @@ class MetadataEditorDock(QDockWidget):
         editor_layout.addRow('File:', QLabel(item.file or item.key))
         for field in item:
             field_item = item.field(field)
-            widget = MetadataEditorDock.EditField(field_item)
+            widget = MetadataEditorDock.EditFieldItems(field_item)
             field_label = '{}: '.format(field.title())
             editor_layout.addRow(field_label, widget)
 
-    class EditField(QLineEdit):
+    class EditFieldItems(QHBoxLayout):
         def __init__(self, field_item):
             super().__init__()
             self._item = field_item
-            self.setText(self._item.data(Qt.EditRole))
-            self.returnPressed.connect(self.new_value)
-            self.textChanged.connect(self.adjustSize)
+            self._item.model().dataChanged.connect(
+                self.data_changed_handler
+            )
+
+            self.data_changed_handler()
+
+        def create_widget(self):
+            widget = MetadataEditorDock.EditField()
+            widget.returnPressed.connect(
+                partial(self.return_pressed_handler, widget)
+            )
+            return widget
+
+        def make_widgets(self, length):
+            while self.count() > length:
+                child = self.takeAt(self.count() - 1)
+                widget = child.widget()
+                widget.deleteLater()
+
+            while self.count() < length:
+                widget = self.create_widget()
+                self.addWidget(widget)
+
+        def data_changed_handler(self, model_index=QModelIndex()):
+            if model_index.isValid():
+                item = model_index.model().itemFromIndex(model_index)
+                if item != self._item:
+                    return
+            values = self._item.data(Qt.UserRole)
+            self.make_widgets(len(values))
+
+            for index in range(self.count()):
+                widget = self.itemAt(index).widget()
+                widget.setText(values[index])
+
+        def return_pressed_handler(self, widget):
+            values = self._item.data(Qt.UserRole)
+            index = self.indexOf(widget)
+            value = widget.text()
+            if value:
+                values[index] = value
+            else:
+                del values[index]
+            self._item.setData(values, Qt.UserRole)
+
+    class EditField(QLineEdit):
+        def __init__(self):
+            super().__init__()
             self.setAlignment(Qt.AlignCenter)
-            self._item.model().dataChanged.connect(self.data_changed)
+            self.setClearButtonEnabled(True)
 
-        def new_value(self, *args, **kwargs):
-            self._item.setData(self.text(), Qt.EditRole)
-            self.setText(self._item.data(Qt.EditRole))
-
-        def data_changed(self, index):
-            item = index.model().itemFromIndex(index)
-            if item == self._item:
-                self.setText(self._item.data(Qt.EditRole))
+            self.textChanged.connect(self.updateGeometry)
 
         def sizeHint(self):
             height = super().sizeHint().height()
@@ -383,6 +422,8 @@ class MetadataEditorDock(QDockWidget):
             text_width = self.fontMetrics().size(
                 Qt.TextSingleLine, self.text()
             ).width()
+            if not self.isVisible():
+                min_width += 26
             return QSize(text_width + min_width, height)
 
     class Layout(QFormLayout):
