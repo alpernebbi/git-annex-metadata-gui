@@ -515,7 +515,7 @@ class MetadataEditorDock(QDockWidget):
                 elif index < len(values):
                     values[index] = value
             else:
-                if len(values) > index:
+                if len(values) > index >= 0:
                     del values[index]
                 if self.widget_count() == 1:
                     self.parent.remove_field(self._item.field)
@@ -716,17 +716,25 @@ class GitAnnexFile(collections.abc.MutableMapping):
 
     def _fields(self, **fields):
         if not fields:
-            new_fields = self.query()['fields']
+            new_fields = self.query().get('fields', {})
         else:
-            new_fields = self.query(fields=fields)['fields']
+            new_fields = self.query(fields=fields).get('fields', {})
 
         for field, value in fields.items():
             new_value = new_fields.get(field, [])
             if set(new_value) != set(value):
                 self.annex.processes.metadata.restart()
-                self._fields(**fields)
+                new_fields = self.query(fields=fields).get('fields', {})
+                break
+        else:
+            return new_fields
 
-        return new_fields
+        for field, value in fields.items():
+            new_value = new_fields.get(field, [])
+            if set(new_value) != set(value):
+                raise KeyError(field)
+        else:
+            return new_fields
 
     def field(self, field):
         if field not in self.field_items:
@@ -778,8 +786,13 @@ class GitAnnexField(QStandardItem):
 
     @value.setter
     def value(self, value):
-        self.item[self.field] = value
-        self.emitDataChanged()
+        try:
+            self.item[self.field] = value
+        except KeyError as err:
+            msg = "{} couldn't be set to {}."
+            print(msg.format(self.field, value))
+        finally:
+            self.emitDataChanged()
 
     def data(self, role=Qt.DisplayRole, *args, **kwargs):
         if role == Qt.DisplayRole:
