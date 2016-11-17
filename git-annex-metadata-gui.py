@@ -110,7 +110,7 @@ class MainWindow(QMainWindow):
         self.menus.docks.addAction(preview_dock.toggleViewAction())
         self.docks.preview = preview_dock
 
-        editor_dock = MetadataEditorDock()
+        editor_dock = MetadataEditorDock(self.create_new_field)
         self.addDockWidget(Qt.BottomDockWidgetArea, editor_dock)
         self.menus.docks.addAction(editor_dock.toggleViewAction())
         self.docks.editor = editor_dock
@@ -209,6 +209,21 @@ class MainWindow(QMainWindow):
         item = index.model().itemFromIndex(index).item
         self.docks.preview.set_item(item)
         self.docks.editor.set_item(item)
+
+    def create_new_field(self, field):
+        files_model = self.models.files
+        keys_model = self.models.keys
+        headers = (*files_model.headers, *keys_model.headers)
+        fields = (f for f, _ in headers)
+
+        if field in fields:
+            return
+
+        keys_model.new_field(field)
+        files_model.new_field(field)
+        action = self.toggle_header_field_action(field, field.title())
+        action.trigger()
+        self.menus.header.addAction(action)
 
 
 class GitAnnexKeysView(QTableView):
@@ -338,12 +353,13 @@ class PreviewDock(QDockWidget):
 
 
 class MetadataEditorDock(QDockWidget):
-    def __init__(self):
+    def __init__(self, new_field_creator):
         super().__init__('Metadata Editor')
         self._widget = MetadataEditorDock.Widget()
         self._layout = self._widget.layout()
         self.setWidget(self._widget)
         self._item = None
+        self._new_field_creator = new_field_creator
 
         self.setAllowedAreas(Qt.BottomDockWidgetArea)
         self.setFeatures(
@@ -380,6 +396,9 @@ class MetadataEditorDock(QDockWidget):
         return button, line_edit
 
     def create_new_field(self, field):
+        if field not in self._item:
+            self._new_field_creator(field)
+
         field_item = self._item.field(field)
         widget = MetadataEditorDock.EditFieldItems(field_item)
         field_label = '{}: '.format(field.title())
@@ -849,16 +868,14 @@ class GitAnnexKeysModel(QStandardItemModel):
         self.annex = GitAnnex(repo_path)
         self.headers = [('key', 'Git-Annex Key')]
 
-        fields = sorted(self.annex.fields())
-        self.headers.extend((name, name.title()) for name in fields)
-        self.setHorizontalHeaderLabels(n for _, n in self.headers)
-
         items = (
-            self.annex.item(key=key)
+            self.annex.item(key=key).field('key')
             for key in self.annex.keys(absent=True)
         )
-        for item in items:
-            self.appendRow([item.field(f) for f, _ in self.headers])
+        self.appendColumn(items)
+
+        fields = sorted(self.annex.fields())
+        self.new_field(*fields)
 
     def flags(self, index):
         item = self.itemFromIndex(index)
@@ -870,6 +887,16 @@ class GitAnnexKeysModel(QStandardItemModel):
                 return Qt.ItemIsEnabled \
                        | Qt.ItemIsSelectable \
                        | Qt.ItemIsEditable
+        else:
+            return Qt.NoItemFlags
+
+    def new_field(self, *fields):
+        self.headers.extend((f, f.title()) for f in fields)
+        items = [self.item(r).item for r in range(self.rowCount())]
+        for f in fields:
+            new_column = [item.field(f) for item in items]
+            self.insertColumn(self.columnCount(), new_column)
+        self.setHorizontalHeaderLabels(n for (_, n) in self.headers)
 
 
 class GitAnnexFilesModel(QStandardItemModel):
@@ -878,22 +905,15 @@ class GitAnnexFilesModel(QStandardItemModel):
         self.annex = GitAnnex(repo_path)
         self.headers = [('file', 'Filename')]
 
-        fields = sorted(self.annex.fields())
-        self.headers.extend((name, name.title()) for name in fields)
-        self.setHorizontalHeaderLabels(n for _, n in self.headers)
-
-        dir_items = {'': [self.invisibleRootItem()]}
+        dir_items = {'': self.invisibleRootItem()}
 
         def make_dir_item(dir_):
             if dir_ in dir_items:
                 return dir_items[dir_]
-            dir_item = [
-                GitAnnexDirectory(dir_, column, field=field)
-                for column, (field, _) in enumerate(self.headers)
-            ]
+            dir_item = GitAnnexDirectory(dir_, field='file')
             dir_items[dir_] = dir_item
             parent = os.path.dirname(dir_)
-            parent_item = make_dir_item(parent)[0]
+            parent_item = make_dir_item(parent)
             parent_item.appendRow(dir_item)
             return dir_item
 
@@ -902,11 +922,12 @@ class GitAnnexFilesModel(QStandardItemModel):
             make_dir_item(dir_)
 
         for file in files:
-            item = self.annex.item(path=file)
-            parent = dir_items[os.path.dirname(file)][0]
-            parent.appendRow(
-                [item.field(f) for f, _ in self.headers]
-            )
+            item = self.annex.item(path=file).field('file')
+            parent = dir_items[os.path.dirname(file)]
+            parent.appendRow(item)
+
+        fields = sorted(self.annex.fields())
+        self.new_field(*fields)
 
     def flags(self, index):
         item = self.itemFromIndex(index)
@@ -920,7 +941,37 @@ class GitAnnexFilesModel(QStandardItemModel):
                 return Qt.ItemIsEnabled \
                        | Qt.ItemIsSelectable \
                        | Qt.ItemIsEditable
+        else:
+            return Qt.NoItemFlags
 
+    def new_field(self, *fields):
+        self.headers.extend((f, f.title()) for f in fields)
+        columns = [self.columnCount() + i for i in range(len(fields))]
+
+        def make_field_item(item, column, field):
+            if isinstance(item, GitAnnexField):
+                return item.item.field(field)
+            elif isinstance(item, GitAnnexDirectory):
+                return GitAnnexDirectory(item.path, column, field)
+
+        def make_field_columns(dir_):
+            if isinstance(dir_, QStandardItemModel):
+                items = [dir_.item(r) for r in range(dir_.rowCount())]
+            elif isinstance(dir_, QStandardItem):
+                items = [dir_.child(r) for r in range(dir_.rowCount())]
+            else:
+                raise RuntimeError()
+
+            for item in items:
+                if isinstance(item, GitAnnexDirectory):
+                    make_field_columns(item)
+
+            for c, f in zip(columns, fields):
+                new_column = [make_field_item(i, c, f) for i in items]
+                dir_.insertColumn(c, new_column)
+
+        make_field_columns(self)
+        self.setHorizontalHeaderLabels(n for (_, n) in self.headers)
 
 if __name__ == '__main__':
     main()
