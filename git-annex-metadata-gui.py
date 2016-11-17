@@ -417,7 +417,7 @@ class MetadataEditorDock(QDockWidget):
             self._new_field_creator(field)
 
         field_item = self._item.field(field)
-        layout = MetadataEditorDock.EditFieldItems(field_item)
+        layout = MetadataEditorDock.EditFieldItems(self, field_item)
         field_label = '{}: '.format(field.title())
         self._layout.insertRow(
             self.field_count(), field_label, layout
@@ -425,13 +425,38 @@ class MetadataEditorDock(QDockWidget):
         self._sublayouts[field] = layout
         return layout
 
+    def remove_field(self, field):
+        if field not in self._sublayouts:
+            return
+
+        layout = self._sublayouts[field]
+        label = self._layout.labelForField(layout)
+
+        label_index = None
+        layout_index = None
+        for index in range(self._layout.count()):
+            item = self._layout.itemAt(index)
+            if item.isEmpty():
+                continue
+            if label == item.widget():
+                label_index = index
+            if layout == item.layout():
+                layout_index = index
+
+        layout_ = self._layout.takeAt(layout_index).layout()
+        label = self._layout.takeAt(label_index).widget()
+        MetadataEditorDock.Layout.clear(layout_)
+        label.deleteLater()
+        del self._sublayouts[field]
+
     class EditFieldItems(QHBoxLayout):
-        def __init__(self, field_item):
+        def __init__(self, parent, field_item):
             super().__init__()
             self._item = field_item
             self._item.model().dataChanged.connect(
                 self.data_changed_handler
             )
+            self.parent = parent
 
             append_button = self.create_append_button()
             self.addWidget(append_button)
@@ -471,6 +496,8 @@ class MetadataEditorDock(QDockWidget):
                     return
             values = self._item.data(Qt.UserRole)
             self.make_widgets(len(values))
+            if not values:
+                self.parent.remove_field(self._item.field)
 
             for index in range(self.widget_count()):
                 widget = self.itemAt(index).widget()
@@ -490,6 +517,8 @@ class MetadataEditorDock(QDockWidget):
             else:
                 if len(values) > index:
                     del values[index]
+                if self.widget_count() == 1:
+                    self.parent.remove_field(self._item.field)
             widget.clearFocus()
             self._item.setData(values, Qt.UserRole)
 
