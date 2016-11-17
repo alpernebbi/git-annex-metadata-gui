@@ -374,6 +374,9 @@ class MetadataEditorDock(QDockWidget):
         )
 
     def set_item(self, item):
+        for layout in self._sublayouts.values():
+            MetadataEditorDock.Layout.clear(layout)
+        self._sublayouts = {}
         self._layout.clear()
         self._item = item
         if item is None:
