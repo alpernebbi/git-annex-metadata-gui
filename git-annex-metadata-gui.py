@@ -393,7 +393,7 @@ class MetadataEditorDock(QDockWidget):
         def handler(widget):
             field = widget.text().lower()
             widget.setText('')
-            if not field:
+            if not field or field in ['file', 'key']:
                 return
 
             if field not in self._sublayouts:
@@ -710,7 +710,8 @@ class GitAnnexFile(collections.abc.MutableMapping):
         return values
 
     def __setitem__(self, meta_key, value):
-        self._fields(**{meta_key: value})
+        if meta_key not in ['key', 'file']:
+            self._fields(**{meta_key: value})
 
     def __delitem__(self, meta_key):
         self._fields(**{meta_key: []})
@@ -780,7 +781,10 @@ class GitAnnexField(QStandardItem):
             return self.value
 
     def setData(self, value, role=Qt.DisplayRole, *args, **kwargs):
-        if role == Qt.EditRole:
+        if self.field in ('key', 'file'):
+            pass
+
+        elif role == Qt.EditRole:
             self.value = json.loads(value)
 
         elif role == Qt.UserRole:
