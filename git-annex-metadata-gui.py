@@ -341,7 +341,9 @@ class MetadataEditorDock(QDockWidget):
     def __init__(self):
         super().__init__('Metadata Editor')
         self._widget = MetadataEditorDock.Widget()
+        self._layout = self._widget.layout()
         self.setWidget(self._widget)
+        self._item = None
 
         self.setAllowedAreas(Qt.BottomDockWidgetArea)
         self.setFeatures(
@@ -350,15 +352,41 @@ class MetadataEditorDock(QDockWidget):
         )
 
     def set_item(self, item):
-        editor_layout = self._widget.layout()
-        editor_layout.clear()
+        self._layout.clear()
+        self._item = item
 
-        editor_layout.addRow('File:', QLabel(item.file or item.key))
+        self._layout.addRow('File:', QLabel(item.file or item.key))
+        new_button, new_field = self.create_new_field_row()
+        self._layout.addRow(new_button, new_field)
+
         for field in item:
-            field_item = item.field(field)
-            widget = MetadataEditorDock.EditFieldItems(field_item)
-            field_label = '{}: '.format(field.title())
-            editor_layout.addRow(field_label, widget)
+            self.create_new_field(field)
+
+    def field_count(self):
+        return self._layout.rowCount() - 1
+
+    def create_new_field_row(self):
+        def handler(widget):
+            field = widget.text()
+            if field:
+                field_widget = self.create_new_field(field)
+                field_widget.itemAt(0).widget().setFocus()
+
+        line_edit = MetadataEditorDock.EditField()
+        line_edit.returnPressed.connect(partial(handler, line_edit))
+
+        button = MetadataEditorDock.AppendButton()
+        button.clicked.connect(partial(handler, line_edit))
+        return button, line_edit
+
+    def create_new_field(self, field):
+        field_item = self._item.field(field)
+        widget = MetadataEditorDock.EditFieldItems(field_item)
+        field_label = '{}: '.format(field.title())
+        self._layout.insertRow(
+            self.field_count(), field_label, widget
+        )
+        return widget
 
     class EditFieldItems(QHBoxLayout):
         def __init__(self, field_item):
@@ -415,7 +443,6 @@ class MetadataEditorDock(QDockWidget):
                 widget.setText(
                     values[index] if len(values) > index else ''
                 )
-
 
         def return_pressed_handler(self, widget):
             values = self._item.data(Qt.UserRole)
