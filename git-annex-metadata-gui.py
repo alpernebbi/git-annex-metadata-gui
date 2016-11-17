@@ -360,6 +360,7 @@ class MetadataEditorDock(QDockWidget):
         self.setWidget(self._widget)
         self._item = None
         self._new_field_creator = new_field_creator
+        self._sublayouts = {}
 
         self.setAllowedAreas(Qt.BottomDockWidgetArea)
         self.setFeatures(
@@ -383,10 +384,16 @@ class MetadataEditorDock(QDockWidget):
 
     def create_new_field_row(self):
         def handler(widget):
-            field = widget.text()
-            if field:
-                field_widget = self.create_new_field(field)
-                field_widget.itemAt(0).widget().setFocus()
+            field = widget.text().lower()
+            widget.setText('')
+            if not field:
+                return
+
+            if field not in self._sublayouts:
+                self.create_new_field(field)
+            layout = self._sublayouts[field]
+            append = layout.itemAt(layout.count() - 1).widget()
+            append.click()
 
         line_edit = MetadataEditorDock.EditField()
         line_edit.returnPressed.connect(partial(handler, line_edit))
@@ -400,12 +407,13 @@ class MetadataEditorDock(QDockWidget):
             self._new_field_creator(field)
 
         field_item = self._item.field(field)
-        widget = MetadataEditorDock.EditFieldItems(field_item)
+        layout = MetadataEditorDock.EditFieldItems(field_item)
         field_label = '{}: '.format(field.title())
         self._layout.insertRow(
-            self.field_count(), field_label, widget
+            self.field_count(), field_label, layout
         )
-        return widget
+        self._sublayouts[field] = layout
+        return layout
 
     class EditFieldItems(QHBoxLayout):
         def __init__(self, field_item):
