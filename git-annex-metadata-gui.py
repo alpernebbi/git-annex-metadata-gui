@@ -202,11 +202,12 @@ class MainWindow(QMainWindow):
 
     def selection_updated(self, selected, deselected):
         indexes = selected.indexes()
-        if not indexes:
-            return
+        if indexes:
+            index = indexes[0]
+            item = index.model().itemFromIndex(index).item
+        else:
+            item = None
 
-        index = indexes[0]
-        item = index.model().itemFromIndex(index).item
         self.docks.preview.set_item(item)
         self.docks.editor.set_item(item)
 
@@ -298,6 +299,10 @@ class PreviewDock(QDockWidget):
         self._item = item
         preview = self._area.widget()
 
+        if item is None:
+            preview.clear()
+            return
+
         path = item.locate(abs=True)
         mime = mimetypes.guess_type(path)[0] or ''
 
@@ -371,6 +376,8 @@ class MetadataEditorDock(QDockWidget):
     def set_item(self, item):
         self._layout.clear()
         self._item = item
+        if item is None:
+            return
 
         self._layout.addRow('File:', QLabel(item.file or item.key))
         new_button, new_field = self.create_new_field_row()
