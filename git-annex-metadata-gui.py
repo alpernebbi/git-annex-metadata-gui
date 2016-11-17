@@ -436,8 +436,8 @@ class MetadataEditorDock(QDockWidget):
 
         def create_widget(self):
             widget = MetadataEditorDock.EditField()
-            widget.returnPressed.connect(
-                partial(self.return_pressed_handler, widget)
+            widget.editingFinished.connect(
+                partial(self.editing_finished_handler, widget)
             )
             return widget
 
@@ -445,9 +445,6 @@ class MetadataEditorDock(QDockWidget):
             return self.count() - 1
 
         def make_widgets(self, length):
-            if length == 0:
-                length = 1
-
             while self.widget_count() > length:
                 child = self.takeAt(0)
                 widget = child.widget()
@@ -471,7 +468,7 @@ class MetadataEditorDock(QDockWidget):
                     values[index] if len(values) > index else ''
                 )
 
-        def return_pressed_handler(self, widget):
+        def editing_finished_handler(self, widget):
             values = self._item.data(Qt.UserRole)
             index = self.indexOf(widget)
             value = widget.text()
@@ -488,6 +485,10 @@ class MetadataEditorDock(QDockWidget):
 
         def clicked_handler(self, button):
             widget_count = self.widget_count()
+            if widget_count == 0:
+                self.make_widgets(1)
+                widget_count = 1
+
             last_widget = self.itemAt(widget_count - 1).widget()
             if last_widget.text():
                 self.make_widgets(widget_count + 1)
