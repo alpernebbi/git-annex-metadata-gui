@@ -390,6 +390,9 @@ class MetadataEditorDock(QDockWidget):
             return self.count() - 1
 
         def make_widgets(self, length):
+            if length == 0:
+                length = 1
+
             while self.widget_count() > length:
                 child = self.takeAt(0)
                 widget = child.widget()
@@ -409,7 +412,10 @@ class MetadataEditorDock(QDockWidget):
 
             for index in range(self.widget_count()):
                 widget = self.itemAt(index).widget()
-                widget.setText(values[index])
+                widget.setText(
+                    values[index] if len(values) > index else ''
+                )
+
 
         def return_pressed_handler(self, widget):
             values = self._item.data(Qt.UserRole)
@@ -421,7 +427,8 @@ class MetadataEditorDock(QDockWidget):
                 elif index < len(values):
                     values[index] = value
             else:
-                del values[index]
+                if len(values) > index:
+                    del values[index]
             widget.clearFocus()
             self._item.setData(values, Qt.UserRole)
 
