@@ -121,7 +121,7 @@ class MainWindow(QMainWindow):
         self.docks.preview = preview_dock
 
         editor_dock = MetadataEditorDock(self.create_new_field)
-        self.addDockWidget(Qt.BottomDockWidgetArea, editor_dock)
+        self.tabifyDockWidget(preview_dock, editor_dock)
         self.menus.docks.addAction(editor_dock.toggleViewAction())
         self.docks.editor = editor_dock
 
@@ -305,10 +305,7 @@ class PreviewDock(QDockWidget):
         self._area = PreviewDock.ScrollArea()
         self._item = None
 
-        self.setAllowedAreas(
-            Qt.LeftDockWidgetArea
-            | Qt.RightDockWidgetArea
-        )
+        self.setAllowedAreas(Qt.AllDockWidgetAreas)
         self.setFeatures(
             QDockWidget.DockWidgetClosable
             | QDockWidget.DockWidgetMovable
@@ -387,7 +384,7 @@ class MetadataEditorDock(QDockWidget):
         self._new_field_creator = new_field_creator
         self._sublayouts = {}
 
-        self.setAllowedAreas(Qt.BottomDockWidgetArea)
+        self.setAllowedAreas(Qt.AllDockWidgetAreas)
         self.setFeatures(
             QDockWidget.DockWidgetClosable
             | QDockWidget.DockWidgetMovable
