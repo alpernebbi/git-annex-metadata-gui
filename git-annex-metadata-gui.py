@@ -271,6 +271,7 @@ class GitAnnexFilesView(QTreeView):
 
         self.setSortingEnabled(True)
         self.setSelectionBehavior(self.SelectRows)
+        self.setUniformRowHeights(True)
 
     def setModel(self, model):
         super().setModel(model)
