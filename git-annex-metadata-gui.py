@@ -54,6 +54,8 @@ class MainWindow(QMainWindow):
         self.setWindowTitle('Git Annex Metadata Editor')
 
         self.current_dir = None
+        self.annex = None
+
         self.actions = Namespace()
         self.menus = Namespace()
         self.models = Namespace()
@@ -140,15 +142,12 @@ class MainWindow(QMainWindow):
 
     def load_repository(self, dir_name):
         try:
-            self.models.keys = GitAnnexKeysModel(dir_name)
+            self.annex = GitAnnex(dir_name)
         except subprocess.CalledProcessError as err:
-            print(err.stderr)
             if 'Not a git repository' in err.stderr:
                 msg = "{} isn't in a git repository."
             elif 'First run: git-annex init' in err.stderr:
                 msg = "{} isn't in a git-annex repository."
-            elif 'not found' in err.stderr:
-                msg = "{} doesn't have any annexed files."
             else:
                 raise
             self.statusBar().showMessage(msg.format(dir_name))
@@ -157,14 +156,8 @@ class MainWindow(QMainWindow):
             self.statusBar().showMessage(err.args[1])
             return
 
-        try:
-            self.models.files = GitAnnexFilesModel(dir_name)
-        except subprocess.CalledProcessError as err:
-            if 'not found' in err.stderr:
-                msg = "{} doesn't have any annexed files in work tree."
-            else:
-                raise
-            self.statusBar().showMessage(msg.format(dir_name))
+        self.models.keys = GitAnnexKeysModel(self.annex)
+        self.models.files = GitAnnexFilesModel(self.annex)
 
         self.current_dir = dir_name
         self.actions.refresh.setDisabled(False)
@@ -655,6 +648,12 @@ class GitAnnex:
             stderr=subprocess.PIPE,
         ).strip()
 
+        subprocess.check_output(
+            ('git', 'annex', 'metadata', '--key', 'SHA256E-s0--0'),
+            universal_newlines=True, cwd=path,
+            stderr=subprocess.PIPE,
+        )
+
         self.processes = Namespace()
         self.processes.metadata = Process(
             'git', 'annex', 'metadata', '--batch', '--json',
@@ -666,13 +665,18 @@ class GitAnnex:
         )
 
     def metadata(self, all=False):
-        jsons = subprocess.check_output(
-            ('git', 'annex', 'metadata', '--json',
-             '--all' if all else ''),
-            universal_newlines=True, cwd=self.repo_path,
-            stderr=subprocess.PIPE,
-        ).splitlines()
-        return [json.loads(json_) for json_ in jsons]
+        try:
+            jsons = subprocess.check_output(
+                ('git', 'annex', 'metadata', '--json',
+                 '--all' if all else ''),
+                universal_newlines=True, cwd=self.repo_path,
+                stderr=subprocess.PIPE,
+            ).splitlines()
+        except subprocess.CalledProcessError as err:
+            if not all and 'not found' in err.stderr:
+                return []
+        else:
+            return [json.loads(json_) for json_ in jsons]
 
     def keys(self, absent=False):
         all_keys = {meta['key'] for meta in self.metadata(all=True)}
@@ -952,9 +956,9 @@ class GitAnnexDirectory(QStandardItem):
 
 
 class GitAnnexKeysModel(QStandardItemModel):
-    def __init__(self, repo_path):
+    def __init__(self, annex):
         super().__init__()
-        self.annex = GitAnnex(repo_path)
+        self.annex = annex
         self.headers = [('key', 'Git-Annex Key')]
 
         items = (
@@ -989,9 +993,9 @@ class GitAnnexKeysModel(QStandardItemModel):
 
 
 class GitAnnexFilesModel(QStandardItemModel):
-    def __init__(self, repo_path):
+    def __init__(self, annex):
         super().__init__()
-        self.annex = GitAnnex(repo_path)
+        self.annex = annex
         self.headers = [('file', 'Filename')]
 
         dir_items = {'': self.invisibleRootItem()}
