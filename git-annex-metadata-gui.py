@@ -665,7 +665,14 @@ class GitAnnex:
             workdir=self.repo_path
         )
 
-    def metadata(self, all=False):
+        self._meta_cache = None
+        self._meta_all_cache = None
+
+    def metadata(self, all=False, cached=False):
+        cache = self._meta_all_cache if all else self._meta_cache
+        if cached and cache:
+            return cache
+
         try:
             jsons = subprocess.check_output(
                 ('git', 'annex', 'metadata', '--json',
@@ -677,27 +684,35 @@ class GitAnnex:
             if not all and 'not found' in err.stderr:
                 return []
         else:
-            return [json.loads(json_) for json_ in jsons]
+            metadata = [json.loads(json_) for json_ in jsons]
+            if all:
+                self._meta_all_cache = metadata
+            else:
+                self._meta_cache = metadata
+            return metadata
 
-    def keys(self, absent=False):
-        all_keys = {meta['key'] for meta in self.metadata(all=True)}
+    def keys(self, absent=False, cached=False):
+        all_meta = self.metadata(cached=cached, all=True)
+        all_keys = {meta['key'] for meta in all_meta}
         if absent:
             try:
-                file_keys = {meta['key'] for meta in self.metadata()}
+                file_meta = self.metadata(cached=cached)
+                file_keys = {meta['key'] for meta in file_meta}
                 return all_keys - file_keys
             except subprocess.CalledProcessError:
                 return all_keys
         else:
             return all_keys
 
-    def files(self):
+    def files(self, cached=False):
         try:
-            return {meta['file'] for meta in self.metadata()}
+            file_meta = self.metadata(cached=cached)
+            return {meta['file'] for meta in file_meta}
         except subprocess.CalledProcessError:
             return {}
 
-    def fields(self):
-        metadata = self.metadata(all=True)
+    def fields(self, cached=False):
+        metadata = self.metadata(all=True, cached=cached)
         fields = [meta.get('fields', {}) for meta in metadata]
         return filter(
             lambda f: not f.endswith('lastchanged'),
@@ -964,11 +979,11 @@ class GitAnnexKeysModel(QStandardItemModel):
 
         items = (
             self.annex.item(key=key).field('key')
-            for key in self.annex.keys(absent=True)
+            for key in self.annex.keys(absent=True, cached=True)
         )
         self.appendColumn(items)
 
-        fields = sorted(self.annex.fields())
+        fields = sorted(self.annex.fields(cached=True))
         self.new_field(*fields)
 
     def flags(self, index):
@@ -1011,7 +1026,7 @@ class GitAnnexFilesModel(QStandardItemModel):
             parent_item.appendRow(dir_item)
             return dir_item
 
-        metadata = self.annex.metadata()
+        metadata = self.annex.metadata(cached=True)
         files = {meta['file']: meta['key'] for meta in metadata}
         for dir_ in map(os.path.dirname, files.keys()):
             make_dir_item(dir_)
@@ -1021,7 +1036,7 @@ class GitAnnexFilesModel(QStandardItemModel):
             parent = dir_items[os.path.dirname(file)]
             parent.appendRow(item)
 
-        fields = sorted(self.annex.fields())
+        fields = sorted(self.annex.fields(cached=True))
         self.new_field(*fields)
 
     def flags(self, index):
