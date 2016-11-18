@@ -53,6 +53,7 @@ class MainWindow(QMainWindow):
         self.resize(800, 600)
         self.setWindowTitle('Git Annex Metadata Editor')
 
+        self.current_dir = None
         self.actions = Namespace()
         self.menus = Namespace()
         self.models = Namespace()
@@ -74,6 +75,14 @@ class MainWindow(QMainWindow):
         open_action.triggered.connect(self.open_directory)
         self.actions.open = open_action
 
+        refresh_action = QAction(self)
+        refresh_action.setText("Refresh")
+        refresh_action.setShortcut(Qt.Key_F5)
+        refresh_action.setStatusTip("Reload files and keys")
+        refresh_action.triggered.connect(self.refresh_all)
+        refresh_action.setDisabled(True)
+        self.actions.refresh = refresh_action
+
         exit_action = QAction(self)
         exit_action.setText("Exit")
         exit_action.setShortcut(Qt.ControlModifier | Qt.Key_Q)
@@ -84,6 +93,7 @@ class MainWindow(QMainWindow):
     def create_menus(self):
         file_menu = self.menuBar().addMenu('&File')
         file_menu.addAction(self.actions.open)
+        file_menu.addAction(self.actions.refresh)
         file_menu.addAction(self.actions.exit)
         self.menus.file = file_menu
 
@@ -123,6 +133,11 @@ class MainWindow(QMainWindow):
         if dir_name:
             self.load_repository(dir_name)
 
+    def refresh_all(self):
+        self.docks.preview.set_item(None)
+        self.docks.editor.set_item(None)
+        self.load_repository(self.current_dir)
+
     def load_repository(self, dir_name):
         try:
             self.models.keys = GitAnnexKeysModel(dir_name)
@@ -151,6 +166,8 @@ class MainWindow(QMainWindow):
                 raise
             self.statusBar().showMessage(msg.format(dir_name))
 
+        self.current_dir = dir_name
+        self.actions.refresh.setDisabled(False)
         self.refresh_views()
         self.populate_header_menu()
 
