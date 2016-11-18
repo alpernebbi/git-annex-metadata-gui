@@ -1009,12 +1009,13 @@ class GitAnnexFilesModel(QStandardItemModel):
             parent_item.appendRow(dir_item)
             return dir_item
 
-        files = self.annex.files()
-        for dir_ in map(os.path.dirname, files):
+        metadata = self.annex.metadata()
+        files = {meta['file']: meta['key'] for meta in metadata}
+        for dir_ in map(os.path.dirname, files.keys()):
             make_dir_item(dir_)
 
-        for file in files:
-            item = self.annex.item(path=file).field('file')
+        for file, key in files.items():
+            item = self.annex.item(key=key, path=file).field('file')
             parent = dir_items[os.path.dirname(file)]
             parent.appendRow(item)
 
