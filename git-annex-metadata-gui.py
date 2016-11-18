@@ -733,8 +733,12 @@ class GitAnnexFile(collections.abc.MutableMapping):
         )
         self.locate = partial(self.annex.locate, self.key)
         self.field_items = {}
+        self.fields_cache = None
 
     def _fields(self, **fields):
+        if self.fields_cache and not fields:
+            return self.fields_cache
+
         if not fields:
             new_fields = self.query().get('fields', {})
         else:
@@ -747,13 +751,16 @@ class GitAnnexFile(collections.abc.MutableMapping):
                 new_fields = self.query(fields=fields).get('fields', {})
                 break
         else:
+            self.fields_cache = new_fields
             return new_fields
 
         for field, value in fields.items():
             new_value = new_fields.get(field, [])
             if set(new_value) != set(value):
+                self.fields_cache = None
                 raise KeyError(field)
         else:
+            self.fields_cache = new_fields
             return new_fields
 
     def field(self, field):
