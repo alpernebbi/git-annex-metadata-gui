@@ -138,6 +138,9 @@ class MainWindow(QMainWindow):
                 raise
             self.statusBar().showMessage(msg.format(dir_name))
             return
+        except FileNotFoundError as err:
+            self.statusBar().showMessage(err.args[1])
+            return
 
         try:
             self.models.files = GitAnnexFilesModel(dir_name)
