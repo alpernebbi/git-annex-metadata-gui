@@ -50,7 +50,6 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
 
-        self.resize(800, 600)
         self.setWindowTitle('Git Annex Metadata Editor')
 
         self.current_dir = None
@@ -252,11 +251,12 @@ class GitAnnexKeysView(QTableView):
 
         header = self.horizontalHeader()
         header.setStretchLastSection(False)
-        header.setSectionResizeMode(0, QHeaderView.Fixed)
         header.resizeSections(QHeaderView.ResizeToContents)
 
+    def sizeHint(self):
+        orig_size = super().sizeHint()
         max_key_length = self.columnWidth(0)
-        self.setMinimumWidth(max_key_length * 1.05)
+        return QSize(max_key_length * 1.05, orig_size.height())
 
     def toggle_header_field(self, field, visible):
         fields = list(zip(*self.model().headers))[0]
@@ -279,12 +279,13 @@ class GitAnnexFilesView(QTreeView):
         self.expandAll()
         header = self.header()
         header.setStretchLastSection(False)
-        header.setSectionResizeMode(0, QHeaderView.Fixed)
         header.resizeSections(QHeaderView.ResizeToContents)
         self.collapseAll()
 
+    def viewportSizeHint(self):
+        orig_size = super().viewportSizeHint()
         max_file_length = self.columnWidth(0)
-        self.setMinimumWidth(max_file_length * 1.05)
+        return QSize(max_file_length * 1.05, orig_size.height())
 
     def toggle_header_field(self, field, visible):
         fields = list(zip(*self.model().headers))[0]
