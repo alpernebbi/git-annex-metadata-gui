@@ -681,8 +681,7 @@ class GitAnnex:
                 stderr=subprocess.PIPE,
             ).splitlines()
         except subprocess.CalledProcessError as err:
-            if not all and 'not found' in err.stderr:
-                return []
+            return []
         else:
             metadata = [json.loads(json_) for json_ in jsons]
             if all:
