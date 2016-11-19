@@ -394,7 +394,12 @@ class MetadataEditorDock(QDockWidget):
         if item is None:
             return
 
-        self._layout.addRow('File:', QLabel(item.file or item.key))
+        file_name = self.fontMetrics().elidedText(
+            item.file or item.key, Qt.ElideRight,
+            self._widget.width() * 0.8,
+        )
+        self._layout.addRow('File:', QLabel(file_name))
+
         new_button, new_field = self.create_new_field_row()
         self._layout.addRow(new_button, new_field)
 
