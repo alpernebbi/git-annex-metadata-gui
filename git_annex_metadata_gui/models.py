@@ -8,6 +8,9 @@ from PyQt5.QtGui import QStandardItem
 from PyQt5.QtGui import QStandardItemModel
 from PyQt5.QtWidgets import QFileIconProvider
 
+from git_annex_metadata_gui.repo import GitAnnexFileMetadata
+from git_annex_metadata_gui.repo import GitAnnex
+
 
 class GitAnnexKeysModel(QStandardItemModel):
     def __init__(self, annex):
@@ -120,6 +123,31 @@ class GitAnnexFilesModel(QStandardItemModel):
 
         make_field_columns(self)
         self.setHorizontalHeaderLabels(n for (_, n) in self.headers)
+
+
+class GitAnnexWrapper(GitAnnex):
+    def __init__(self, path):
+        super().__init__(path)
+
+    def item(self, key=None, path=None):
+        if key:
+            return GitAnnexFile(self, key, file=path)
+        elif path:
+            key = self.processes.metadata.query_json(file=path)['key']
+            return GitAnnexFile(self, key, file=path)
+        else:
+            raise ValueError('Requires path or key')
+
+
+class GitAnnexFile(GitAnnexFileMetadata):
+    def __init__(self, annex, key, file=None):
+        super().__init__(annex, key, file=file)
+        self.field_items = {}
+
+    def field(self, field):
+        if field not in self.field_items:
+            self.field_items[field] = GitAnnexField(self, field)
+        return self.field_items[field]
 
 
 class GitAnnexField(QStandardItem):

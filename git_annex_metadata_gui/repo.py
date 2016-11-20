@@ -5,8 +5,6 @@ import subprocess
 from argparse import Namespace
 from functools import partial
 
-from git_annex_metadata_gui.models import GitAnnexField
-
 
 class Process:
     def __init__(self, *batch_command, workdir=None):
@@ -132,15 +130,6 @@ class GitAnnex:
             set.union(*map(set, fields + [{}]))
         )
 
-    def item(self, key=None, path=None):
-        if key:
-            return GitAnnexFile(self, key, file=path)
-        elif path:
-            key = self.processes.metadata.query_json(file=path)['key']
-            return GitAnnexFile(self, key, file=path)
-        else:
-            raise ValueError('Requires path or key')
-
     def locate(self, key, abs=False):
         rel_path = self.processes.locate.query_line(key)
         if abs:
@@ -152,7 +141,7 @@ class GitAnnex:
         return 'GitAnnex(repo_path={!r})'.format(self.repo_path)
 
 
-class GitAnnexFile(collections.abc.MutableMapping):
+class GitAnnexFileMetadata(collections.abc.MutableMapping):
     def __init__(self, annex, key, file=None):
         self.key = key
         self.file = file
@@ -162,7 +151,6 @@ class GitAnnexFile(collections.abc.MutableMapping):
             key=key
         )
         self.locate = partial(self.annex.locate, self.key)
-        self.field_items = {}
         self.fields_cache = None
 
     def _fields(self, **fields):
@@ -193,11 +181,6 @@ class GitAnnexFile(collections.abc.MutableMapping):
             self.fields_cache = new_fields
             return new_fields
 
-    def field(self, field):
-        if field not in self.field_items:
-            self.field_items[field] = GitAnnexField(self, field)
-        return self.field_items[field]
-
     def __getitem__(self, meta_key):
         if meta_key == 'key':
             return [self.key]
@@ -225,5 +208,5 @@ class GitAnnexFile(collections.abc.MutableMapping):
         len([x for x in self])
 
     def __repr__(self):
-        return 'GitAnnexFile(key={!r}, file={!r})'.format(
+        return 'GitAnnexFileMetadata(key={!r}, file={!r})'.format(
             self.key, self.file)

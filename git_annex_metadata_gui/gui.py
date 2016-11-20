@@ -12,7 +12,7 @@ from PyQt5.QtWidgets import QFileDialog
 from PyQt5.QtWidgets import QMainWindow
 from PyQt5.QtWidgets import QTabWidget
 
-from git_annex_metadata_gui.repo import GitAnnex
+from git_annex_metadata_gui.models import GitAnnexWrapper
 from git_annex_metadata_gui.models import GitAnnexFilesModel
 from git_annex_metadata_gui.models import GitAnnexKeysModel
 from git_annex_metadata_gui.views import GitAnnexFilesView
@@ -125,7 +125,7 @@ class MainWindow(QMainWindow):
 
     def load_repository(self, dir_name):
         try:
-            self.annex = GitAnnex(dir_name)
+            self.annex = GitAnnexWrapper(dir_name)
         except subprocess.CalledProcessError as err:
             if 'Not a git repository' in err.stderr:
                 msg = "{} isn't in a git repository."
