@@ -1,3 +1,4 @@
+import collections.abc
 import json
 import os
 import re
@@ -20,7 +21,7 @@ class GitAnnexKeysModel(QStandardItemModel):
         self.headers = [('key', 'Git-Annex Key')]
 
         items = (
-            self.annex.item(key=key).field('key')
+            self.annex[key].field('key')
             for key in self.annex.keys(absent=True, cached=True)
         )
         self.appendColumn(items)
@@ -30,7 +31,7 @@ class GitAnnexKeysModel(QStandardItemModel):
 
     def flags(self, index):
         item = self.itemFromIndex(index)
-        if isinstance(item, GitAnnexField):
+        if isinstance(item, GitAnnexFieldItem):
             if item.field == 'key':
                 return Qt.ItemIsEnabled \
                        | Qt.ItemIsSelectable
@@ -49,6 +50,10 @@ class GitAnnexKeysModel(QStandardItemModel):
             self.insertColumn(self.columnCount(), new_column)
         self.setHorizontalHeaderLabels(n for (_, n) in self.headers)
 
+    def __repr__(self):
+        repr_ = 'GitAnnexKeysModel(annex={!r}, headers={!r})'
+        return repr_.format(self.annex, self.headers)
+
 
 class GitAnnexFilesModel(QStandardItemModel):
     def __init__(self, annex):
@@ -61,7 +66,7 @@ class GitAnnexFilesModel(QStandardItemModel):
         def make_dir_item(dir_):
             if dir_ in dir_items:
                 return dir_items[dir_]
-            dir_item = GitAnnexDirectory(dir_, field='file')
+            dir_item = GitAnnexDirectoryItem(dir_, field='file')
             dir_items[dir_] = dir_item
             parent = os.path.dirname(dir_)
             parent_item = make_dir_item(parent)
@@ -74,7 +79,7 @@ class GitAnnexFilesModel(QStandardItemModel):
             make_dir_item(dir_)
 
         for file, key in files.items():
-            item = self.annex.item(key=key, path=file).field('file')
+            item = self.annex[file].field('file', copy=True)
             parent = dir_items[os.path.dirname(file)]
             parent.appendRow(item)
 
@@ -83,9 +88,9 @@ class GitAnnexFilesModel(QStandardItemModel):
 
     def flags(self, index):
         item = self.itemFromIndex(index)
-        if isinstance(item, GitAnnexDirectory):
+        if isinstance(item, GitAnnexDirectoryItem):
             return Qt.ItemIsEnabled
-        elif isinstance(item, GitAnnexField):
+        elif isinstance(item, GitAnnexFieldItem):
             if item.field == 'file':
                 return Qt.ItemIsEnabled \
                        | Qt.ItemIsSelectable
@@ -101,10 +106,10 @@ class GitAnnexFilesModel(QStandardItemModel):
         columns = [self.columnCount() + i for i in range(len(fields))]
 
         def make_field_item(item, column, field):
-            if isinstance(item, GitAnnexField):
-                return item.item.field(field)
-            elif isinstance(item, GitAnnexDirectory):
-                return GitAnnexDirectory(item.path, column, field)
+            if isinstance(item, GitAnnexFieldItem):
+                return item.item.field(field, copy=True)
+            elif isinstance(item, GitAnnexDirectoryItem):
+                return GitAnnexDirectoryItem(item.path, column, field)
 
         def make_field_columns(dir_):
             if isinstance(dir_, QStandardItemModel):
@@ -115,7 +120,7 @@ class GitAnnexFilesModel(QStandardItemModel):
                 raise RuntimeError()
 
             for item in items:
-                if isinstance(item, GitAnnexDirectory):
+                if isinstance(item, GitAnnexDirectoryItem):
                     make_field_columns(item)
 
             for c, f in zip(columns, fields):
@@ -125,40 +130,113 @@ class GitAnnexFilesModel(QStandardItemModel):
         make_field_columns(self)
         self.setHorizontalHeaderLabels(n for (_, n) in self.headers)
 
+    def __repr__(self):
+        repr_ = 'GitAnnexFilesModel(annex={!r}, headers={!r})'
+        return repr_.format(self.annex, self.headers)
+
 
 class GitAnnexWrapper(GitAnnex):
     def __init__(self, path):
-        repo = GitRepo(path)
-        super().__init__(repo)
+        self.repo = GitRepo(path)
+        super().__init__(self.repo)
+        self.key_items = {}
 
-    def item(self, key=None, path=None):
-        if key:
-            return GitAnnexFile(self, key, file=path)
-        elif path:
-            key = self.lookupkey(path)
-            return GitAnnexFile(self, key, file=path)
+    def __getitem__(self, map_key):
+        if map_key in self.files(cached=True):
+            key, file = self.lookupkey(map_key), map_key
+            return GitAnnexFileMetadata(self[key], file)
+
+        elif map_key in self.keys(cached=True):
+            key, file = map_key, None
+            if key in self.key_items:
+                return self.key_items[key]
+            else:
+                self.key_items[key] = GitAnnexKeyMetadata(self, key)
+                return self.key_items[key]
+
         else:
-            raise ValueError('Requires path or key')
+            raise KeyError(map_key)
+
+    def __repr__(self):
+        repr_ = 'GitAnnexWrapper(repo={!r})'
+        return repr_.format(self.repo)
 
 
-class GitAnnexFile(GitAnnexMetadata):
-    def __init__(self, annex, key, file=None):
-        super().__init__(annex, key, file=file)
+class GitAnnexKeyMetadata(GitAnnexMetadata):
+    def __init__(self, annex, key):
+        super().__init__(annex, key)
         self.field_items = {}
 
-    def field(self, field):
-        if field not in self.field_items:
-            self.field_items[field] = GitAnnexField(self, field)
-        return self.field_items[field]
+    def field(self, field, copy=False):
+        if field in self.field_items:
+            item = self.field_items[field]
+            return item.copy() if copy else item
+        else:
+            self.field_items[field] = GitAnnexFieldItem(self, field)
+            return self.field_items[field]
+
+    def __repr__(self):
+        repr_ = 'GitAnnexKeyMetadata(key={!r}, annex={!r})'
+        return repr_.format(self.key, self.annex)
 
 
-class GitAnnexField(QStandardItem):
+class GitAnnexFileMetadata(collections.abc.MutableMapping):
+    def __init__(self, key_item, file):
+        self._item = key_item
+        self.file = file
+        self.field_item = None
+
+    def field(self, field, copy=False):
+        if field != 'file':
+            return self._item.field(field, copy=copy)
+        elif self.field_item:
+            return self.field_item
+        else:
+            self.field_item = GitAnnexFieldItem(self, 'file')
+            return self.field_item
+
+    def fields(self, **fields):
+        return self._item.fields(**fields)
+
+    def locate(self, absolute=False):
+        return self._item.locate(absolute=absolute)
+
+    def __getitem__(self, meta_key):
+        if meta_key == 'file':
+            return [self.file]
+        else:
+            return self._item.__getitem__(meta_key)
+
+    def __setitem__(self, meta_key, value):
+        return self._item.__setitem__(meta_key, value)
+
+    def __delitem__(self, meta_key):
+        return self._item.__delitem__(meta_key)
+
+    def __contains__(self, meta_key):
+        return self._item.__contains__(meta_key)
+
+    def __iter__(self):
+        return self._item.__iter__()
+
+    def __len__(self):
+        return self._item.__len__()
+
+    def __repr__(self):
+        repr_ = 'GitAnnexFileMetadata(file={!r}, item={!r})'
+        return repr_.format(self.file, self._item)
+
+
+class GitAnnexFieldItem(QStandardItem):
     qt_type = QStandardItem.UserType + 1
 
-    def __init__(self, item, field):
+    def __init__(self, item, field, master=None):
         super().__init__()
         self.item = item
         self.field = field
+
+        self.master = master
+        self.copies = []
 
     @property
     def value(self):
@@ -173,6 +251,23 @@ class GitAnnexField(QStandardItem):
             print(msg.format(self.field, value))
         finally:
             self.emitDataChanged()
+            if self.master:
+                self.master.copy_changed(self)
+            else:
+                self.copy_changed(self)
+
+    def copy(self):
+        if self.master:
+            return self.master.copy()
+        else:
+            copy_ = GitAnnexFieldItem(self.item, self.field, self)
+            self.copies.append(copy_)
+            return copy_
+
+    def copy_changed(self, origin):
+        for copy in self.copies:
+            if copy != origin:
+                copy.emitDataChanged()
 
     def data(self, role=Qt.DisplayRole, *args, **kwargs):
         if role == Qt.DisplayRole:
@@ -238,7 +333,7 @@ class GitAnnexField(QStandardItem):
         return value
 
     def __lt__(self, other):
-        if isinstance(other, GitAnnexDirectory):
+        if isinstance(other, GitAnnexDirectoryItem):
             return False
         else:
             return super().__lt__(other)
@@ -247,11 +342,11 @@ class GitAnnexField(QStandardItem):
         return not self.__lt__(other)
 
     def __repr__(self):
-        return 'GitAnnexField(item={!r}, field={!r})'.format(
+        return 'GitAnnexFieldItem(item={!r}, field={!r})'.format(
             self.item, self.field)
 
 
-class GitAnnexDirectory(QStandardItem):
+class GitAnnexDirectoryItem(QStandardItem):
     qt_type = QStandardItem.UserType + 2
 
     def __init__(self, path, column=0, field='file'):
@@ -294,7 +389,7 @@ class GitAnnexDirectory(QStandardItem):
         return self.qt_type
 
     def __lt__(self, other):
-        if isinstance(other, GitAnnexField):
+        if isinstance(other, GitAnnexFieldItem):
             return False
         else:
             return super().__lt__(other)
@@ -303,5 +398,5 @@ class GitAnnexDirectory(QStandardItem):
         return not self.__lt__(other)
 
     def __repr__(self):
-        return 'GitAnnexDirectory(path={!r}, field={!r})'.format(
+        return 'GitAnnexDirectoryItem(path={!r}, field={!r})'.format(
             self.path, self.field)

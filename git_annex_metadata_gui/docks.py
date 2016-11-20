@@ -230,10 +230,6 @@ class MetadataEditorDock(QDockWidget):
                 self.insertWidget(self.widget_count(), widget)
 
         def data_changed_handler(self, model_index=QModelIndex()):
-            if model_index.isValid():
-                item = model_index.model().itemFromIndex(model_index)
-                if item != self._item:
-                    return
             values = self._item.data(Qt.UserRole)
             self.make_widgets(len(values))
             if not values:
