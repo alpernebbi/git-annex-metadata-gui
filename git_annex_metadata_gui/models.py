@@ -8,8 +8,9 @@ from PyQt5.QtGui import QStandardItem
 from PyQt5.QtGui import QStandardItemModel
 from PyQt5.QtWidgets import QFileIconProvider
 
-from git_annex_metadata_gui.repo import GitAnnexFileMetadata
-from git_annex_metadata_gui.repo import GitAnnex
+from git_annex_adapter import GitAnnexMetadata
+from git_annex_adapter import GitAnnex
+from git_annex_adapter import GitRepo
 
 
 class GitAnnexKeysModel(QStandardItemModel):
@@ -127,19 +128,20 @@ class GitAnnexFilesModel(QStandardItemModel):
 
 class GitAnnexWrapper(GitAnnex):
     def __init__(self, path):
-        super().__init__(path)
+        repo = GitRepo(path)
+        super().__init__(repo)
 
     def item(self, key=None, path=None):
         if key:
             return GitAnnexFile(self, key, file=path)
         elif path:
-            key = self.processes.metadata.query_json(file=path)['key']
+            key = self.lookupkey(path)
             return GitAnnexFile(self, key, file=path)
         else:
             raise ValueError('Requires path or key')
 
 
-class GitAnnexFile(GitAnnexFileMetadata):
+class GitAnnexFile(GitAnnexMetadata):
     def __init__(self, annex, key, file=None):
         super().__init__(annex, key, file=file)
         self.field_items = {}

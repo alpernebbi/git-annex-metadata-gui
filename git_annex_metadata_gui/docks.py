@@ -38,7 +38,7 @@ class PreviewDock(QDockWidget):
             preview.clear()
             return
 
-        path = item.locate(abs=True)
+        path = item.locate(absolute=True)
         mime = mimetypes.guess_type(path)[0] or ''
 
         if mime.startswith('text/'):
