@@ -255,6 +255,7 @@ class GitAnnexFieldItem(QStandardItem):
                 self.master.copy_changed(self)
             else:
                 self.copy_changed(self)
+            self.directory_changed()
 
     def copy(self):
         if self.master:
@@ -268,6 +269,18 @@ class GitAnnexFieldItem(QStandardItem):
         for copy in self.copies:
             if copy != origin:
                 copy.emitDataChanged()
+
+    def directory_changed(self):
+        dir_name_item = self.parent()
+        if not dir_name_item:
+            return
+
+        model = self.model()
+        dir_name_index = model.indexFromItem(dir_name_item)
+        row, col = dir_name_index.row(), self.column()
+        dir_field_index = dir_name_index.sibling(row, col)
+        dir_field_item = model.itemFromIndex(dir_field_index)
+        dir_field_item.emitDataChanged()
 
     def data(self, role=Qt.DisplayRole, *args, **kwargs):
         if role == Qt.DisplayRole:
