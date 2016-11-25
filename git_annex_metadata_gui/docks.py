@@ -119,7 +119,7 @@ class MetadataEditorDock(QDockWidget):
 
         file_name = self.fontMetrics().elidedText(
             item.file or item.key, Qt.ElideRight,
-            self._widget.width() * 0.8,
+            self._widget.width() * 0.7,
         )
         self._layout.addRow('File:', QLabel(file_name))
 
