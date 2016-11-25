@@ -15,8 +15,7 @@ from PyQt5.QtWidgets import QTabWidget
 from git_annex_metadata_gui.models import GitAnnexWrapper
 from git_annex_metadata_gui.models import GitAnnexFilesModel
 from git_annex_metadata_gui.models import GitAnnexKeysModel
-from git_annex_metadata_gui.views import GitAnnexFilesView
-from git_annex_metadata_gui.views import GitAnnexKeysView
+from git_annex_metadata_gui.views import GitAnnexView
 from git_annex_metadata_gui.docks import MetadataEditorDock
 from git_annex_metadata_gui.docks import PreviewDock
 
@@ -90,8 +89,8 @@ class MainWindow(QMainWindow):
         self.menus.docks = docks_menu
 
     def create_views(self):
-        self.views.files = GitAnnexFilesView()
-        self.views.keys = GitAnnexKeysView()
+        self.views.files = GitAnnexView()
+        self.views.keys = GitAnnexView()
 
     def create_center_widget(self):
         tabs_widget = QTabWidget()
