@@ -27,7 +27,6 @@ from PyQt5.QtWidgets import QFileIconProvider
 
 from git_annex_adapter import GitAnnexMetadata
 from git_annex_adapter import GitAnnex
-from git_annex_adapter import GitRepo
 
 
 class GitAnnexKeysModel(QStandardItemModel):
@@ -153,8 +152,7 @@ class GitAnnexFilesModel(QStandardItemModel):
 
 class GitAnnexWrapper(GitAnnex):
     def __init__(self, path):
-        self.repo = GitRepo(path)
-        super().__init__(self.repo)
+        super().__init__(path)
         self.key_items = {}
 
     def __getitem__(self, map_key):
@@ -174,8 +172,8 @@ class GitAnnexWrapper(GitAnnex):
             raise KeyError(map_key)
 
     def __repr__(self):
-        repr_ = 'GitAnnexWrapper(repo={!r})'
-        return repr_.format(self.repo)
+        repr_ = 'GitAnnexWrapper(path={!r})'
+        return repr_.format(self.path)
 
 
 class GitAnnexKeyMetadata(GitAnnexMetadata):
