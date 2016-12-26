@@ -160,7 +160,7 @@ class GitAnnexWrapper(GitAnnex):
             key, file = self.lookupkey(map_key), map_key
             return GitAnnexFileMetadata(self[key], file)
 
-        elif map_key in self.keys(cached=True):
+        elif self.examinekey(map_key):
             key, file = map_key, None
             if key in self.key_items:
                 return self.key_items[key]
