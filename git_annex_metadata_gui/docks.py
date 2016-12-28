@@ -55,7 +55,12 @@ class PreviewDock(QDockWidget):
             return
 
         path = item.locate(absolute=True)
-        mime = mimetypes.guess_type(path)[0] or ''
+        filename = item['file'][0]
+        try:
+            mime = mimetypes.guess_type(path)[0] \
+                   or mimetypes.guess_type(filename)[0]
+        except:
+            mime = ''
 
         if mime.startswith('text/'):
             with open(path) as file:
