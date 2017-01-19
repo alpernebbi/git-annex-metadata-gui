@@ -156,20 +156,21 @@ class GitAnnexWrapper(GitAnnex):
         self.key_items = {}
 
     def __getitem__(self, map_key):
-        if map_key in self.files(cached=True):
-            key, file = self.lookupkey(map_key), map_key
-            return GitAnnexFileMetadata(self[key], file)
+        key, file = self.lookupkey(map_key), map_key
 
-        elif self.examinekey(map_key):
+        if not key and self.examinekey(map_key):
             key, file = map_key, None
-            if key in self.key_items:
-                return self.key_items[key]
-            else:
-                self.key_items[key] = GitAnnexKeyMetadata(self, key)
-                return self.key_items[key]
 
-        else:
+        if not key:
             raise KeyError(map_key)
+
+        if file:
+            return GitAnnexFileMetadata(self[key], file)
+        elif key in self.key_items:
+            return self.key_items[key]
+        else:
+            self.key_items[key] = GitAnnexKeyMetadata(self, key)
+            return self.key_items[key]
 
     def __repr__(self):
         repr_ = 'GitAnnexWrapper(path={!r})'
