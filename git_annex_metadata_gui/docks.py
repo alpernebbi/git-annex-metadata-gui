@@ -58,7 +58,8 @@ class PreviewDock(QDockWidget):
         filename = item['file'][0]
         try:
             mime = mimetypes.guess_type(path)[0] \
-                   or mimetypes.guess_type(filename)[0]
+                   or mimetypes.guess_type(filename)[0] \
+                   or ''
         except:
             mime = ''
 
