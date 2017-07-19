@@ -49,5 +49,5 @@ setuptools.setup(
     },
     keywords='git-annex metadata',
     packages=['git_annex_metadata_gui'],
-    install_requires=['PyQt5', 'git-annex-adapter'],
+    install_requires=['PyQt5', 'git-annex-adapter==0.1.0'],
 )
