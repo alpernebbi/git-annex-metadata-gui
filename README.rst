@@ -19,16 +19,3 @@ Usage
 
     $ git-annex-metadata-gui [/path/to/repo]
 
-Screenshots
------------
-.. image:: screenshots/s1.png
-    :alt: Files in the current branch
-
-.. image:: screenshots/s2.png
-    :alt: Metadata editor and header fields
-
-.. image:: screenshots/s3.png
-    :alt: Keys that aren't in the current branch
-
-.. image:: screenshots/s4.png
-    :alt: Text preview

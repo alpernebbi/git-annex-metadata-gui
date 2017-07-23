@@ -44,7 +44,7 @@ setuptools.setup(
     ],
     entry_points={
         'gui_scripts': [
-            'git-annex-metadata-gui=git_annex_metadata_gui.gui:main',
+            'git-annex-metadata-gui=git_annex_metadata_gui:main',
         ],
     },
     keywords='git-annex metadata',
