@@ -26,7 +26,7 @@ with open(os.path.join(root, 'README.rst'), encoding='utf-8') as f:
 
 setuptools.setup(
     name='git-annex-metadata-gui',
-    version='0.1.0',
+    version='0.2.0',
     description='Graphical interface for git-annex metadata commands',
     long_description=readme,
     url='https://github.com/alpernebbi/git-annex-metadata-gui',
@@ -49,5 +49,5 @@ setuptools.setup(
     },
     keywords='git-annex metadata',
     packages=['git_annex_metadata_gui'],
-    install_requires=['PyQt5', 'git-annex-adapter==0.1.0'],
+    install_requires=['PyQt5', 'git-annex-adapter>=0.2.0'],
 )
