@@ -16,24 +16,20 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-import sys
-
-from PyQt5 import QtCore
-from PyQt5 import QtGui
 from PyQt5 import QtWidgets
 
-from .main_window import MainWindow
+from .main_window_ui import Ui_MainWindow
 
-app = None
 
-def main():
-    global app
-    app = QtWidgets.QApplication(sys.argv)
+class MainWindow(QtWidgets.QMainWindow):
+    _ui = Ui_MainWindow()
 
-    main_window = MainWindow()
-    main_window.show()
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.setupUi()
 
-    return app.exec_()
+    def setupUi(self):
+        self._ui.setupUi(self)
 
-if __name__ == "__main__":
-    main()
+    def retranslateUi(self):
+        self._ui.retranslateUi(self)
