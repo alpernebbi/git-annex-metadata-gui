@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
-# Git-Annex-Metadata-Gui Setup
-# Copyright (C) 2016 Alper Nebi Yasak
+# Git-Annex-Metadata-Gui
+# Copyright (C) 2017 Alper Nebi Yasak
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
