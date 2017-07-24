@@ -22,7 +22,7 @@ from PyQt5 import QtCore
 from PyQt5 import QtGui
 from PyQt5 import QtWidgets
 
-from .main_window import Ui_MainWindow
+from .main_window_ui import Ui_MainWindow
 
 app = None
 

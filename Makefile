@@ -16,15 +16,15 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-QTUIFILES:=$(wildcard qtdesigner-ui/*.ui)
-PYUIFILES:=$(QTUIFILES:qtdesigner-ui/%.ui=git_annex_metadata_gui/%.py)
+QTUI:=$(wildcard qtdesigner-ui/*.ui)
+PYUI:=$(QTUI:qtdesigner-ui/%.ui=git_annex_metadata_gui/%_ui.py)
 
-git_annex_metadata_gui/%.py: qtdesigner-ui/%.ui
+git_annex_metadata_gui/%_ui.py: qtdesigner-ui/%.ui
 	pyuic5 -o $@ $<
 
 all: gui
 
-gui: $(PYUIFILES)
+gui: $(PYUI)
 
 design:
 	PYQTDESIGNERPATH=qtdesigner-plugins PYTHONPATH=. designer
