@@ -26,6 +26,21 @@ from PyQt5 import QtCore
 from PyQt5 import QtGui
 
 
+def parse_as_set(x):
+    if x == '{}':
+        return set()
+
+    try:
+        xs = ast.literal_eval(x)
+        assert isinstance(xs, set)
+        return xs
+
+    except Exception as err:
+        fmt = "Can't interpret '{}' as a set."
+        msg = fmt.format(x)
+        raise ValueError(msg) from err
+
+
 class AnnexedKeyMetadataTable(QtCore.QAbstractTableModel):
     def __init__(self, path, parent=None):
         super().__init__(parent)
@@ -87,83 +102,55 @@ class AnnexedKeyMetadataTable(QtCore.QAbstractTableModel):
             return 0
 
     def data(self, index, role=Qt.Qt.DisplayRole):
-        if not index.isValid():
+        if not self._index_in_table(index):
             return None
 
         row, col = index.row(), index.column()
-        if not 0 <= row < len(self.objects):
-            return None
-        if not 0 <= col < len(self.fields):
-            return None
 
         if role == Qt.Qt.DisplayRole:
-            obj = self.objects[row]
-            if col == 0:
-                return obj.key
-
-            field_name = self.fields[col]
-            try:
-                field = obj.metadata[field_name]
-                field_str = str(field)
-            except KeyError:
-                field_str = ''
-
-            return field_str
+            data = self._get_field(row, col)
+            if data:
+                return str(data)
 
     def headerData(self, section, orientation, role=Qt.Qt.DisplayRole):
         if orientation == Qt.Qt.Horizontal:
-            if section == 0:
-                field_name = "Git-Annex Key"
-            elif 0 < section < len(self.fields):
-                field_name = self.fields[section]
-            else:
+            if not 0 <= section < len(self.fields):
                 return None
 
+            if section == 0:
+                field = 'Git-Annex Key'
+            else:
+                field = self.fields[section]
+
             if role == Qt.Qt.DisplayRole:
-                return field_name
+                return field
 
         elif orientation == Qt.Qt.Vertical:
             if role == Qt.Qt.DisplayRole:
                 return section + 1
 
     def setData(self, index, value, role=Qt.Qt.EditRole):
-        if not index.isValid():
+        if not self._index_in_fields(index):
             return False
 
         row, col = index.row(), index.column()
-        if not 0 <= row < len(self.objects):
-            return False
-        if not 1 <= col < len(self.fields):
-            return False
 
         if role == Qt.Qt.EditRole:
             try:
-                obj = self.objects[row]
-                field_name = self.fields[col]
-
-                field_value = ast.literal_eval(value)
-                if field_value == {}:
-                    field_value = set()
-
-                obj.metadata[field_name] = field_value
-                self.dataChanged.emit(index, index)
+                value = parse_as_set(value)
+                self._set_field(row, col, value)
                 return True
 
             except:
                 return False
 
-        else:
-            return False
+        return False
 
     def flags(self, index):
-        if not index.isValid():
+        if not self._index_in_table(index):
             return Qt.Qt.NoItemFlags
 
         row, col = index.row(), index.column()
-        if not 0 <= row < len(self.objects):
-            return Qt.Qt.NoItemFlags
-        if not 0 <= col < len(self.fields):
-            return Qt.Qt.NoItemFlags
 
         if col == 0:
             return (
@@ -179,6 +166,37 @@ class AnnexedKeyMetadataTable(QtCore.QAbstractTableModel):
                 | Qt.Qt.ItemIsEnabled
                 | Qt.Qt.ItemNeverHasChildren
             )
+
+    def _index_in_table(self, index):
+        return index.isValid() \
+            and 0 <= index.row() < len(self.objects) \
+            and 0 <= index.column() < len(self.fields)
+
+    def _index_in_keys(self, index):
+        return index.isValid() \
+            and 0 <= index.row() < len(self.objects) \
+            and index.column() == 0
+
+    def _index_in_fields(self, index):
+        return index.isValid() \
+            and 0 <= index.row() < len(self.objects) \
+            and 0 < index.column() < len(self.fields)
+
+    def _get_field(self, row, col):
+        obj = self.objects[row]
+        if col == 0:
+            return obj.key
+
+        field = self.fields[col]
+        return obj.metadata.get(field, set())
+
+    def _set_field(self, row, col, value):
+        obj = self.objects[row]
+        field = self.fields[col]
+        obj.metadata[field] = value
+
+        index = self.index(row, col)
+        self.dataChanged.emit(index, index)
 
     def __repr__(self):
         return "{name}.{cls}({args})".format(
