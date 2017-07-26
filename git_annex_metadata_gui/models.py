@@ -14,125 +14,175 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
+import ast
+import bisect
 import time
+import types
+
+from git_annex_adapter.repo import GitAnnexRepo
 
 from PyQt5 import Qt
 from PyQt5 import QtCore
 from PyQt5 import QtGui
 
 
-class AnnexedKeyMetadataModel(QtGui.QStandardItemModel):
-    def __init__(self, repo, parent=None):
+class AnnexedKeyMetadataTable(QtCore.QAbstractTableModel):
+    def __init__(self, path, parent=None):
         super().__init__(parent)
-        self.repo = repo
-        self.fields = []
+        self.repo = GitAnnexRepo(path)
 
-        self._keys_to_add = iter(repo.annex)
+        self.objects = []
+        self.fields = [None]
+        self._pending = iter(self.repo.annex.values())
+
         QtCore.QMetaObject.invokeMethod(
-            self, '_add_next_keys',
+            self, '_lazy_init',
             Qt.Qt.QueuedConnection,
-            QtCore.Q_ARG(float, 0.1),
         )
 
-    @QtCore.pyqtSlot(float)
-    def _add_next_keys(self, interval=0.0):
+    @QtCore.pyqtSlot()
+    def _lazy_init(self):
         try:
-            endtime = time.monotonic() + interval
-            while interval == 0 or time.monotonic() < endtime:
-                key = next(self._keys_to_add)
-                self.add_key(key)
+            endtime = time.monotonic() + 0.1
+            while time.monotonic() < endtime:
+                obj = next(self._pending)
+
+                self.insert_key(obj)
+                for field in obj.metadata:
+                    self.insert_field(field)
 
         except StopIteration:
             return
 
         else:
             QtCore.QMetaObject.invokeMethod(
-                self, '_add_next_keys',
+                self, '_lazy_init',
                 Qt.Qt.QueuedConnection,
-                QtCore.Q_ARG(float, interval),
             )
 
     @QtCore.pyqtSlot(str)
-    def add_key(self, key):
-        key_obj = self.repo.annex[key]
-        key_item = AnnexedKeyItem(key_obj)
+    def insert_field(self, field):
+        if field not in self.fields:
+            col = bisect.bisect(self.fields, field, lo=1)
+            self.beginInsertColumns(QtCore.QModelIndex(), col, col)
+            self.fields.insert(col, field)
+            self.endInsertColumns()
 
-        new_fields = set(key_obj.metadata) - set(self.fields)
-        for field in new_fields:
-            self.add_field(field)
+    def insert_key(self, obj):
+        row = len(self.objects)
+        self.beginInsertRows(QtCore.QModelIndex(), row, row)
+        self.objects.append(obj)
+        self.endInsertRows()
 
-        field_items = (
-            key_item.field_item(field)
-            for field in self.fields
-        )
+    def rowCount(self, parent=QtCore.QModelIndex()):
+        if parent == QtCore.QModelIndex():
+            return len(self.objects)
+        else:
+            return 0
 
-        self.appendRow([key_item, *field_items])
+    def columnCount(self, parent=QtCore.QModelIndex()):
+        if parent == QtCore.QModelIndex():
+            return len(self.fields)
+        else:
+            return 0
 
-    @QtCore.pyqtSlot(str)
-    def add_field(self, field):
-        new_items = [
-            self.item(i, 0).field_item(field)
-            for i in range(self.rowCount())
-        ]
+    def data(self, index, role=Qt.Qt.DisplayRole):
+        if not index.isValid():
+            return None
 
-        self.fields.append(field),
-        self.fields.sort()
-        idx = self.fields.index(field) + 1
-        self.insertColumn(idx, new_items)
+        row, col = index.row(), index.column()
+        if not 0 <= row < len(self.objects):
+            return None
+        if not 0 <= col < len(self.fields):
+            return None
 
-        self.setHorizontalHeaderLabels(
-            ['Git-Annex Key', *self.fields],
-        )
-
-    def __repr__(self):
-        return "{name}.{cls}({args})".format(
-            name=__name__,
-            cls=self.__class__.__name__,
-            args=self.repo,
-        )
-
-
-class AnnexedMetadataFieldItem(QtGui.QStandardItem):
-    def __init__(self, key_item, field):
-        super().__init__(key_item)
-        self._key_item = key_item
-        self._field = field
-
-    def data(self, role=Qt.Qt.DisplayRole):
         if role == Qt.Qt.DisplayRole:
+            obj = self.objects[row]
+            if col == 0:
+                return obj.key
+
+            field_name = self.fields[col]
             try:
-                metadata = self._key_item._key_obj.metadata
-                return str(metadata[self._field])
+                field = obj.metadata[field_name]
+                field_str = str(field)
             except KeyError:
+                field_str = ''
+
+            return field_str
+
+    def headerData(self, section, orientation, role=Qt.Qt.DisplayRole):
+        if orientation == Qt.Qt.Horizontal:
+            if section == 0:
+                field_name = "Git-Annex Key"
+            elif 0 < section < len(self.fields):
+                field_name = self.fields[section]
+            else:
                 return None
 
+            if role == Qt.Qt.DisplayRole:
+                return field_name
+
+        elif orientation == Qt.Qt.Vertical:
+            if role == Qt.Qt.DisplayRole:
+                return section + 1
+
+    def setData(self, index, value, role=Qt.Qt.EditRole):
+        if not index.isValid():
+            return False
+
+        row, col = index.row(), index.column()
+        if not 0 <= row < len(self.objects):
+            return False
+        if not 1 <= col < len(self.fields):
+            return False
+
+        if role == Qt.Qt.EditRole:
+            try:
+                obj = self.objects[row]
+                field_name = self.fields[col]
+
+                field_value = ast.literal_eval(value)
+                if field_value == {}:
+                    field_value = set()
+
+                obj.metadata[field_name] = field_value
+                self.dataChanged.emit(index, index)
+                return True
+
+            except:
+                return False
+
+        else:
+            return False
+
+    def flags(self, index):
+        if not index.isValid():
+            return Qt.Qt.NoItemFlags
+
+        row, col = index.row(), index.column()
+        if not 0 <= row < len(self.objects):
+            return Qt.Qt.NoItemFlags
+        if not 0 <= col < len(self.fields):
+            return Qt.Qt.NoItemFlags
+
+        if col == 0:
+            return (
+                Qt.Qt.ItemIsSelectable
+                | Qt.Qt.ItemIsEnabled
+                | Qt.Qt.ItemNeverHasChildren
+            )
+
+        else:
+            return (
+                Qt.Qt.ItemIsSelectable
+                | Qt.Qt.ItemIsEditable
+                | Qt.Qt.ItemIsEnabled
+                | Qt.Qt.ItemNeverHasChildren
+            )
+
     def __repr__(self):
         return "{name}.{cls}({args})".format(
             name=__name__,
             cls=self.__class__.__name__,
-            args={
-                'key_item': self._key_item,
-                'field': self._field,
-            },
+            args=self.repo.workdir,
         )
-
-
-class AnnexedKeyItem(QtGui.QStandardItem):
-    def __init__(self, key_obj, parent=None):
-        super().__init__(parent)
-        self._key_obj = key_obj
-
-    def data(self, role=Qt.Qt.DisplayRole):
-        if role == Qt.Qt.DisplayRole:
-            return self._key_obj.key
-
-    def field_item(self, field):
-        return AnnexedMetadataFieldItem(self, field)
-
-    def __repr__(self):
-        return "{name}.{cls}({args})".format(
-            name=__name__,
-            cls=self.__class__.__name__,
-            args=self._key_obj.key,
-        )
-
