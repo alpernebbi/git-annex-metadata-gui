@@ -52,13 +52,10 @@ class AnnexedKeyMetadataTable(QtCore.QAbstractTableModel):
         self.fields = [None]
         self._pending = iter(self.repo.annex.values())
 
-        QtCore.QMetaObject.invokeMethod(
-            self, '_lazy_init',
-            Qt.Qt.QueuedConnection,
-        )
+    def fetchMore(self, parent=QtCore.QModelIndex()):
+        if not self._pending:
+            return
 
-    @QtCore.pyqtSlot()
-    def _lazy_init(self):
         try:
             endtime = time.monotonic() + 0.1
             while time.monotonic() < endtime:
@@ -69,13 +66,21 @@ class AnnexedKeyMetadataTable(QtCore.QAbstractTableModel):
                     self.insert_field(field)
 
         except StopIteration:
+            self._pending = False
+
+    def canFetchMore(self, parent=QtCore.QModelIndex()):
+        return bool(self._pending)
+
+    @QtCore.pyqtSlot()
+    def fetchAll(self):
+        self.fetchMore()
+        if not self.canFetchMore():
             return
 
-        else:
-            QtCore.QMetaObject.invokeMethod(
-                self, '_lazy_init',
-                Qt.Qt.QueuedConnection,
-            )
+        QtCore.QMetaObject.invokeMethod(
+            self, 'fetchAll',
+            Qt.Qt.QueuedConnection,
+        )
 
     @QtCore.pyqtSlot(str)
     def insert_field(self, field):
