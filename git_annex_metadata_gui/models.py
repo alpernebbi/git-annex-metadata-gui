@@ -144,6 +144,15 @@ class AnnexedKeyMetadataTable(QtCore.QAbstractTableModel):
             if isinstance(data, set) and len(data) > 1:
                 return str(data)
 
+        elif role == Qt.Qt.FontRole:
+            if col == 0:
+                font = QtGui.QFontDatabase.FixedFont
+            else:
+                font = QtGui.QFontDatabase.GeneralFont
+
+            fontdb = QtGui.QFontDatabase()
+            return fontdb.systemFont(font)
+
     def headerData(self, section, orientation, role=Qt.Qt.DisplayRole):
         if orientation == Qt.Qt.Horizontal:
             if not 0 <= section < len(self.fields):
