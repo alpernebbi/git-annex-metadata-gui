@@ -130,6 +130,12 @@ class AnnexedKeyMetadataTable(QtCore.QAbstractTableModel):
             else:
                 return str(data)
 
+        elif role == Qt.Qt.ToolTipRole:
+            data = self._get_field(row, col)
+
+            if isinstance(data, set) and len(data) > 1:
+                return str(data)
+
     def headerData(self, section, orientation, role=Qt.Qt.DisplayRole):
         if orientation == Qt.Qt.Horizontal:
             if not 0 <= section < len(self.fields):
