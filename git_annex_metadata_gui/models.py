@@ -24,6 +24,7 @@ from git_annex_adapter.repo import GitAnnexRepo
 from PyQt5 import Qt
 from PyQt5 import QtCore
 from PyQt5 import QtGui
+from PyQt5 import QtWidgets
 
 
 def parse_as_set(x):
@@ -42,6 +43,7 @@ def parse_as_set(x):
 
 
 class AnnexedKeyMetadataTable(QtCore.QAbstractTableModel):
+
     def __init__(self, path, parent=None):
         super().__init__(parent)
         self.repo = GitAnnexRepo(path)
@@ -121,6 +123,12 @@ class AnnexedKeyMetadataTable(QtCore.QAbstractTableModel):
                     return "<{n} values>".format(n=len(data))
                 else:
                     return data.pop()
+
+        elif role == Qt.Qt.DecorationRole:
+            if col == 0:
+                icon_type = QtWidgets.QFileIconProvider.File
+                icon_provider = QtWidgets.QFileIconProvider()
+                return icon_provider.icon(icon_type)
 
         elif role == Qt.Qt.EditRole:
             data = self._get_field(row, col)
