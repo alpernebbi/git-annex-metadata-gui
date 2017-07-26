@@ -109,8 +109,18 @@ class AnnexedKeyMetadataTable(QtCore.QAbstractTableModel):
 
         if role == Qt.Qt.DisplayRole:
             data = self._get_field(row, col)
-            if data:
-                return str(data)
+
+            if not data:
+                return None
+
+            if isinstance(data, str):
+                return data
+
+            elif isinstance(data, set):
+                if len(data) > 1:
+                    return "<{n} values>".format(n=len(data))
+                else:
+                    return data.pop()
 
     def headerData(self, section, orientation, role=Qt.Qt.DisplayRole):
         if orientation == Qt.Qt.Horizontal:
