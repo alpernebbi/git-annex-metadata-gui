@@ -27,8 +27,10 @@ all: gui
 gui: $(PYUI)
 
 design:
-	PYQTDESIGNERPATH=qtdesigner-plugins PYTHONPATH=. designer
-	$(MAKE) gui
+	PYQTDESIGNERPATH=qtdesigner-plugins \
+	PYTHONPATH=. \
+		designer qtdesigner-ui/main_window.ui \
+		>/dev/null 2>&1 &
 
 test:
 	python3 -m "unittest" -vb
