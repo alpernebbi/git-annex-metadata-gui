@@ -19,8 +19,6 @@ import bisect
 import time
 import types
 
-from git_annex_adapter.repo import GitAnnexRepo
-
 from PyQt5 import Qt
 from PyQt5 import QtCore
 from PyQt5 import QtGui
@@ -43,45 +41,66 @@ def parse_as_set(x):
 
 
 class AnnexedKeyMetadataTable(QtCore.QAbstractTableModel):
-
-    def __init__(self, path, parent=None):
+    def __init__(self, parent=None):
         super().__init__(parent)
-        self.repo = GitAnnexRepo(path)
-
-        self.keys = []
+        self.fields = []
         self.objects = []
-        self.fields = [None]
-        self._pending = iter(self.repo.annex.values())
+        self._pending = iter(())
 
-    def fetchMore(self, parent=QtCore.QModelIndex()):
-        if not self._pending:
-            return
+    def setRepo(self, repo):
+        self.beginResetModel()
+
+        self.repo = repo
+        self.fields = [None]
+        self.objects = list(self.repo.annex.values())
+        self._pending = iter(self.objects)
+
+        self.endResetModel()
+
+        QtCore.QMetaObject.invokeMethod(
+            self, '_buildFields',
+            Qt.Qt.QueuedConnection,
+        )
+
+    @QtCore.pyqtSlot()
+    @QtCore.pyqtSlot(set)
+    def _buildFields(self, fields=None):
+        if fields is None:
+            fields = set()
 
         try:
             endtime = time.monotonic() + 0.1
             while time.monotonic() < endtime:
                 obj = next(self._pending)
-
-                self.insert_key(obj)
-                for field in obj.metadata:
-                    self.insert_field(field)
+                fields.update(obj.metadata)
 
         except StopIteration:
-            self._pending = False
+            fields -= set(self.fields)
+            if not fields:
+                return
 
-    def canFetchMore(self, parent=QtCore.QModelIndex()):
-        return bool(self._pending)
+            if self.fields == [None]:
+                self.beginInsertColumns(
+                    QtCore.QModelIndex(),
+                    1, len(fields),
+                )
+                self.fields.extend(sorted(fields))
+                self.endInsertColumns()
 
-    @QtCore.pyqtSlot()
-    def fetchAll(self):
-        self.fetchMore()
-        if not self.canFetchMore():
-            return
+            else:
+                for field in fields:
+                    QtCore.QMetaObject.invokeMethod(
+                        self, 'insert_field',
+                        Qt.Qt.QueuedConnection,
+                        QtCore.Q_ARG(str, field),
+                    )
 
-        QtCore.QMetaObject.invokeMethod(
-            self, 'fetchAll',
-            Qt.Qt.QueuedConnection,
-        )
+        else:
+            QtCore.QMetaObject.invokeMethod(
+                self, '_buildFields',
+                Qt.Qt.QueuedConnection,
+                QtCore.Q_ARG(set, fields),
+            )
 
     @QtCore.pyqtSlot(str)
     def insert_field(self, field):
@@ -90,13 +109,6 @@ class AnnexedKeyMetadataTable(QtCore.QAbstractTableModel):
             self.beginInsertColumns(QtCore.QModelIndex(), col, col)
             self.fields.insert(col, field)
             self.endInsertColumns()
-
-    def insert_key(self, obj):
-        row = bisect.bisect(self.keys, obj.key)
-        self.beginInsertRows(QtCore.QModelIndex(), row, row)
-        self.keys.insert(row, obj.key)
-        self.objects.insert(row, obj)
-        self.endInsertRows()
 
     def rowCount(self, parent=QtCore.QModelIndex()):
         if parent == QtCore.QModelIndex():
