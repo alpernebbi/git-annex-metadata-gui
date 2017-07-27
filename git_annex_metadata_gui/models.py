@@ -48,6 +48,7 @@ class AnnexedKeyMetadataTable(QtCore.QAbstractTableModel):
         super().__init__(parent)
         self.repo = GitAnnexRepo(path)
 
+        self.keys = []
         self.objects = []
         self.fields = [None]
         self._pending = iter(self.repo.annex.values())
@@ -91,9 +92,10 @@ class AnnexedKeyMetadataTable(QtCore.QAbstractTableModel):
             self.endInsertColumns()
 
     def insert_key(self, obj):
-        row = len(self.objects)
+        row = bisect.bisect(self.keys, obj.key)
         self.beginInsertRows(QtCore.QModelIndex(), row, row)
-        self.objects.append(obj)
+        self.keys.insert(row, obj.key)
+        self.objects.insert(row, obj)
         self.endInsertRows()
 
     def rowCount(self, parent=QtCore.QModelIndex()):
