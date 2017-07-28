@@ -16,13 +16,18 @@
 
 import ast
 import bisect
+import collections
 import time
 import types
+import pygit2
 
 from PyQt5 import Qt
 from PyQt5 import QtCore
 from PyQt5 import QtGui
 from PyQt5 import QtWidgets
+
+from git_annex_adapter.repo import AnnexedFile
+from git_annex_adapter.repo import AnnexedFileTree
 
 
 def parse_as_set(x):
@@ -221,3 +226,272 @@ class AnnexedKeyMetadataModel(QtGui.QStandardItemModel):
             cls=self.__class__.__name__,
             args=self.repo,
         )
+
+
+class DataProxyItem(QtGui.QStandardItem):
+    def __init__(self, item):
+        super().__init__()
+        self._item = item
+
+        model = self._item.model()
+        model.dataChanged.connect(self._propagate_changes)
+
+    def type(self):
+        return QtGui.QStandardItem.UserType + 3
+
+    def data(self, role=Qt.Qt.DisplayRole):
+        return self._item.data(role=role)
+
+    def setData(self, value, role=Qt.Qt.EditRole):
+        return self._item.setData(value, role=role)
+
+    def flags(self):
+        return self._item.flags()
+
+    def _propagate_changes(self, topLeft, bottomRight, roles):
+        rows = range(topLeft.row(), bottomRight.row() + 1)
+        columns = range(topLeft.column(), bottomRight.column() + 1)
+
+        if item.row() in rows and item.column() in columns:
+            self.emitDataChanged()
+
+    def __repr__(self):
+        return "{name}.{cls}({args})".format(
+            name=__name__,
+            cls=self.__class__.__name__,
+            args=self._item,
+        )
+
+
+class AnnexedFileItem(DataProxyItem):
+    def __init__(self, key_item, filename):
+        super().__init__(key_item)
+        self._name = filename
+
+        self.setSelectable(True)
+        self.setEditable(False)
+        self.setEnabled(True)
+
+    def type(self):
+        return QtGui.QStandardItem.UserType + 4
+
+    def data(self, role=Qt.Qt.DisplayRole):
+        if role == Qt.Qt.DisplayRole:
+            return self._name
+        else:
+            return super().data(role=role)
+
+    def __repr__(self):
+        return "{name}.{cls}({args})".format(
+            name=__name__,
+            cls=self.__class__.__name__,
+            args={
+                'item': self._item,
+                'name': self._name,
+            },
+        )
+
+
+class AnnexedDirectoryItem(QtGui.QStandardItem):
+    def __init__(self, dirname):
+        super().__init__()
+        self._name = dirname
+
+        self.setText(self._name)
+
+        icon = QtWidgets.QFileIconProvider.Folder
+        icon = QtWidgets.QFileIconProvider().icon(icon)
+        self.setIcon(icon)
+
+        self.setSelectable(True)
+        self.setEditable(False)
+        self.setEnabled(True)
+
+    def type(self):
+        return QtGui.QStandardItem.UserType + 5
+
+    def __repr__(self):
+        return "{name}.{cls}({args})".format(
+            name=__name__,
+            cls=self.__class__.__name__,
+            args=self._name,
+        )
+
+
+class AnnexedDirectoryFieldItem(QtGui.QStandardItem):
+    def __init__(self, dir_item):
+        super().__init__()
+        self._item = dir_item
+        self._connected = False
+
+        self.setSelectable(True)
+        self.setEditable(False)
+        self.setEnabled(True)
+
+        if self._item.model():
+            self._connect()
+
+    def _connect(self):
+        if self._connected:
+            return
+
+        model = self._item.model()
+        model.dataChanged.connect(self._propagate_changes)
+        model.layoutChanged.connect(self._emit_data_changed)
+        model.modelReset.connect(self._emit_data_changed)
+        model.rowsInserted.connect(self._on_rows_inserted)
+        model.rowsMoved.connect(self._on_rows_moved)
+        model.rowsRemoved.connect(self._on_rows_removed)
+
+        self._connected = True
+
+    def type(self):
+        return QtGui.QStandardItem.UserType + 6
+
+    def data(self, role=Qt.Qt.DisplayRole):
+        children = (
+            self._item.child(row, self.column())
+            for row in range(self._item.rowCount())
+        )
+
+        responses = set()
+        for child in children:
+            responses.add(child.data(role=role))
+            if len(responses) > 1:
+                return None
+
+        if responses:
+            return responses.pop()
+
+    def _propagate_changes(self, topLeft, bottomRight, roles):
+        rows = range(topLeft.row(), bottomRight.row() + 1)
+        columns = range(topLeft.column(), bottomRight.column() + 1)
+
+        parent = topLeft.parent()
+        if parent != bottomRight.parent():
+            self.emitDataChanged()
+            return
+
+        if parent != self._item.index():
+            return
+
+        if self.column() in columns:
+            self.emitDataChanged()
+
+    def _emit_data_changed(self):
+        self.emitDataChanged()
+
+    def _on_rows_inserted(self, parent, first, last):
+        if parent == self._item.index():
+            self.emitDataChanged()
+
+    def _on_rows_moved(self, parent, start, end, destination, row):
+        if parent == self._item.index():
+            self.emitDataChanged()
+        if destination == self._item.index():
+            self.emitDataChanged()
+
+    def _on_rows_removed(self, parent, first, last):
+        if parent == self._item.index():
+            self.emitDataChanged()
+
+    def __repr__(self):
+        return "{name}.{cls}({args})".format(
+            name=__name__,
+            cls=self.__class__.__name__,
+            args={
+                'item': self._item,
+                'column': self.column(),
+            }
+        )
+
+
+class AnnexedFileMetadataModel(QtGui.QStandardItemModel):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+    def setSourceModel(self, model):
+        self.beginResetModel()
+        self._model = model
+        self.endResetModel()
+
+        self.setTreeish()
+
+    @QtCore.pyqtSlot(str)
+    def setTreeish(self, treeish='HEAD'):
+        self.beginResetModel()
+
+        self._treeish = treeish
+        self._pending = []
+        tree = self._model.repo.annex.get_file_tree(self._treeish)
+        self._build_tree(tree)
+
+        self.endResetModel()
+
+        QtCore.QMetaObject.invokeMethod(
+            self, '_populate',
+            Qt.Qt.QueuedConnection,
+        )
+
+    def _build_tree(self, tree, parent_item=None):
+        PendingFile = collections.namedtuple(
+            'PendingFile',
+            ['key', 'name', 'parent'],
+        )
+
+        if parent_item is None:
+            parent_item = self.invisibleRootItem()
+
+        for name, obj in tree.items():
+            if isinstance(obj, pygit2.Blob):
+                pass
+
+            if isinstance(obj, AnnexedFile):
+                f = PendingFile(obj.key, name, parent_item)
+                self._pending.append(f)
+
+            elif isinstance(obj, AnnexedFileTree):
+                item = AnnexedDirectoryItem(name)
+                field_items = [
+                    AnnexedDirectoryFieldItem(item)
+                    for c in range(1, self._model.columnCount())
+                ]
+                parent_item.appendRow([item, *field_items])
+
+                for field_item in field_items:
+                    field_item._connect()
+
+                self._build_tree(obj, parent_item=item)
+
+    @QtCore.pyqtSlot()
+    def _populate(self):
+        try:
+            items = iter(self._pending)
+            endtime = time.monotonic() + 0.1
+            while time.monotonic() < endtime:
+                file = next(items)
+                obj = self._model.key_items.get(file.key)
+
+                if obj:
+                    self.insert_file(obj, file.name, file.parent)
+                    self._pending.remove(file)
+
+        except StopIteration:
+            pass
+
+        if self._pending:
+            QtCore.QMetaObject.invokeMethod(
+                self, '_populate',
+                Qt.Qt.QueuedConnection,
+            )
+
+    def insert_file(self, obj, name, parent=None):
+        if parent is None:
+            parent = self.invisibleRootItem()
+
+        file_item = AnnexedFileItem(obj, name)
+        field_items = (
+            DataProxyItem(self._model.item(obj.row(), c))
+            for c in range(1, self._model.columnCount())
+        )
+        parent.appendRow([file_item, *field_items])
