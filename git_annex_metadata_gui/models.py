@@ -40,227 +40,184 @@ def parse_as_set(x):
         raise ValueError(msg) from err
 
 
-class AnnexedKeyMetadataTable(QtCore.QAbstractTableModel):
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.fields = []
-        self.objects = []
-        self._pending = iter(())
+class AnnexedKeyItem(QtGui.QStandardItem):
+    def __init__(self, key_obj):
+        super().__init__()
+        self._obj = key_obj
 
-    def setRepo(self, repo):
-        self.beginResetModel()
+        self.setText(self.key)
 
-        self.repo = repo
-        self.fields = [None]
-        self.objects = list(self.repo.annex.values())
-        self._pending = iter(self.objects)
+        font = QtGui.QFontDatabase.FixedFont
+        font = QtGui.QFontDatabase().systemFont(font)
+        self.setFont(font)
 
-        self.endResetModel()
+        icon = QtWidgets.QFileIconProvider.File
+        icon = QtWidgets.QFileIconProvider().icon(icon)
+        self.setIcon(icon)
 
-        QtCore.QMetaObject.invokeMethod(
-            self, '_buildFields',
-            Qt.Qt.QueuedConnection,
-        )
+        self.setSelectable(True)
+        self.setEditable(False)
+        self.setEnabled(True)
 
-    @QtCore.pyqtSlot()
-    @QtCore.pyqtSlot(set)
-    def _buildFields(self, fields=None):
-        if fields is None:
-            fields = set()
+    @property
+    def metadata(self):
+        return self._obj.metadata
 
-        try:
-            endtime = time.monotonic() + 0.1
-            while time.monotonic() < endtime:
-                obj = next(self._pending)
-                fields.update(obj.metadata)
+    @property
+    def key(self):
+        return self._obj.key
 
-        except StopIteration:
-            fields -= set(self.fields)
-            if not fields:
-                return
-
-            if self.fields == [None]:
-                self.beginInsertColumns(
-                    QtCore.QModelIndex(),
-                    1, len(fields),
-                )
-                self.fields.extend(sorted(fields))
-                self.endInsertColumns()
-
-            else:
-                for field in fields:
-                    QtCore.QMetaObject.invokeMethod(
-                        self, 'insert_field',
-                        Qt.Qt.QueuedConnection,
-                        QtCore.Q_ARG(str, field),
-                    )
-
-        else:
-            QtCore.QMetaObject.invokeMethod(
-                self, '_buildFields',
-                Qt.Qt.QueuedConnection,
-                QtCore.Q_ARG(set, fields),
-            )
-
-    @QtCore.pyqtSlot(str)
-    def insert_field(self, field):
-        if field not in self.fields:
-            col = bisect.bisect(self.fields, field, lo=1)
-            self.beginInsertColumns(QtCore.QModelIndex(), col, col)
-            self.fields.insert(col, field)
-            self.endInsertColumns()
-
-    def rowCount(self, parent=QtCore.QModelIndex()):
-        if parent == QtCore.QModelIndex():
-            return len(self.objects)
-        else:
-            return 0
-
-    def columnCount(self, parent=QtCore.QModelIndex()):
-        if parent == QtCore.QModelIndex():
-            return len(self.fields)
-        else:
-            return 0
-
-    def data(self, index, role=Qt.Qt.DisplayRole):
-        if not self._index_in_table(index):
-            return None
-
-        row, col = index.row(), index.column()
-
-        if role == Qt.Qt.DisplayRole:
-            data = self._get_field(row, col)
-
-            if not data:
-                return None
-
-            if isinstance(data, str):
-                return data
-
-            elif isinstance(data, set):
-                if len(data) > 1:
-                    return "<{n} values>".format(n=len(data))
-                else:
-                    return data.pop()
-
-        elif role == Qt.Qt.DecorationRole:
-            if col == 0:
-                icon_type = QtWidgets.QFileIconProvider.File
-                icon_provider = QtWidgets.QFileIconProvider()
-                return icon_provider.icon(icon_type)
-
-        elif role == Qt.Qt.EditRole:
-            data = self._get_field(row, col)
-
-            if not data:
-                return None
-            else:
-                return str(data)
-
-        elif role == Qt.Qt.ToolTipRole:
-            data = self._get_field(row, col)
-
-            if isinstance(data, set) and len(data) > 1:
-                return str(data)
-
-        elif role == Qt.Qt.FontRole:
-            if col == 0:
-                font = QtGui.QFontDatabase.FixedFont
-            else:
-                font = QtGui.QFontDatabase.GeneralFont
-
-            fontdb = QtGui.QFontDatabase()
-            return fontdb.systemFont(font)
-
-    def headerData(self, section, orientation, role=Qt.Qt.DisplayRole):
-        if orientation == Qt.Qt.Horizontal:
-            if not 0 <= section < len(self.fields):
-                return None
-
-            if section == 0:
-                field = 'Git-Annex Key'
-            else:
-                field = self.fields[section]
-
-            if role == Qt.Qt.DisplayRole:
-                return field
-
-        elif orientation == Qt.Qt.Vertical:
-            if role == Qt.Qt.DisplayRole:
-                return section + 1
-
-    def setData(self, index, value, role=Qt.Qt.EditRole):
-        if not self._index_in_fields(index):
-            return False
-
-        row, col = index.row(), index.column()
-
-        if role == Qt.Qt.EditRole:
-            try:
-                value = parse_as_set(value)
-                self._set_field(row, col, value)
-                return True
-
-            except:
-                return False
-
-        return False
-
-    def flags(self, index):
-        if not self._index_in_table(index):
-            return Qt.Qt.NoItemFlags
-
-        row, col = index.row(), index.column()
-
-        if col == 0:
-            return (
-                Qt.Qt.ItemIsSelectable
-                | Qt.Qt.ItemIsEnabled
-                | Qt.Qt.ItemNeverHasChildren
-            )
-
-        else:
-            return (
-                Qt.Qt.ItemIsSelectable
-                | Qt.Qt.ItemIsEditable
-                | Qt.Qt.ItemIsEnabled
-                | Qt.Qt.ItemNeverHasChildren
-            )
-
-    def _index_in_table(self, index):
-        return index.isValid() \
-            and 0 <= index.row() < len(self.objects) \
-            and 0 <= index.column() < len(self.fields)
-
-    def _index_in_keys(self, index):
-        return index.isValid() \
-            and 0 <= index.row() < len(self.objects) \
-            and index.column() == 0
-
-    def _index_in_fields(self, index):
-        return index.isValid() \
-            and 0 <= index.row() < len(self.objects) \
-            and 0 < index.column() < len(self.fields)
-
-    def _get_field(self, row, col):
-        obj = self.objects[row]
-        if col == 0:
-            return obj.key
-
-        field = self.fields[col]
-        return obj.metadata.get(field, set())
-
-    def _set_field(self, row, col, value):
-        obj = self.objects[row]
-        field = self.fields[col]
-        obj.metadata[field] = value
-
-        index = self.index(row, col)
-        self.dataChanged.emit(index, index)
+    def type(self):
+        return QtGui.QStandardItem.UserType + 1
 
     def __repr__(self):
         return "{name}.{cls}({args})".format(
             name=__name__,
             cls=self.__class__.__name__,
-            args=self.repo.workdir,
+            args=self._obj.key,
+        )
+
+
+class AnnexedFieldItem(QtGui.QStandardItem):
+    def __init__(self, key_item, field):
+        super().__init__()
+        self._item = key_item
+        self._field = field
+
+        self.setSelectable(True)
+        self.setEditable(True)
+        self.setEnabled(True)
+
+    @property
+    def metadata(self):
+        return self._item.metadata.get(self._field, set())
+
+    @metadata.setter
+    def metadata(self, value):
+        self._item.metadata[self._field] = value
+        self.emitDataChanged()
+
+    def type(self):
+        return QtGui.QStandardItem.UserType + 2
+
+    def data(self, role=Qt.Qt.DisplayRole):
+        if role == Qt.Qt.DisplayRole:
+            data = self.metadata
+
+            if len(data) == 0:
+                return None
+            if len(data) == 1:
+                return data.pop()
+            else:
+                return "<{n} values>".format(n=len(data))
+
+        elif role == Qt.Qt.EditRole:
+            data = self.metadata
+            if data:
+                return str(data)
+
+        elif role == Qt.Qt.ToolTipRole:
+            data = self.metadata
+            if data:
+                return str(data)
+
+        else:
+            return super().data(role=role)
+
+    def setData(self, value, role=Qt.Qt.EditRole):
+        if role == Qt.Qt.DisplayRole:
+            return False
+
+        elif role == Qt.Qt.EditRole:
+            try:
+                self.metadata = parse_as_set(value)
+            except:
+                return
+
+        else:
+            super().setData(value, role=role)
+
+    def __repr__(self):
+        return "{name}.{cls}({args})".format(
+            name=__name__,
+            cls=self.__class__.__name__,
+            args={
+                'item': self._item,
+                'field': self._field,
+            }
+        )
+
+
+class AnnexedKeyMetadataModel(QtGui.QStandardItemModel):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+    def setRepo(self, repo):
+        self.beginResetModel()
+
+        self.repo = repo
+        self.fields = ['Git-Annex Key']
+        self.key_items = {}
+        self._pending = iter(self.repo.annex.values())
+        self.clear()
+
+        self.endResetModel()
+
+        QtCore.QMetaObject.invokeMethod(
+            self, '_populate',
+            Qt.Qt.QueuedConnection,
+        )
+
+    @QtCore.pyqtSlot()
+    def _populate(self):
+        try:
+            endtime = time.monotonic() + 0.1
+            while time.monotonic() < endtime:
+                obj = next(self._pending)
+                self.insert_key(obj)
+
+        except StopIteration:
+            pass
+
+        else:
+            QtCore.QMetaObject.invokeMethod(
+                self, '_populate',
+                Qt.Qt.QueuedConnection,
+            )
+
+    def insert_key(self, key_obj):
+        key_item = AnnexedKeyItem(key_obj)
+        field_items = (
+            AnnexedFieldItem(key_obj, field)
+            for field in self.fields[1:]
+        )
+        self.appendRow([key_item, *field_items])
+        self.key_items[key_item.key] = key_item
+
+        new_fields = set(key_item.metadata) - set(self.fields)
+        for field in new_fields:
+            QtCore.QMetaObject.invokeMethod(
+                self, 'insert_field',
+                Qt.Qt.QueuedConnection,
+                QtCore.Q_ARG(str, field)
+            )
+
+    @QtCore.pyqtSlot(str)
+    def insert_field(self, field):
+        if field in self.fields:
+            return
+        col = bisect.bisect(self.fields, field, lo=1)
+        items = [
+            AnnexedFieldItem(self.item(row, 0), field)
+            for row in range(self.rowCount())
+        ]
+        self.insertColumn(col, items)
+        self.fields.insert(col, field)
+        self.setHorizontalHeaderLabels(self.fields)
+
+    def __repr__(self):
+        return "{name}.{cls}({args})".format(
+            name=__name__,
+            cls=self.__class__.__name__,
+            args=self.repo,
         )
