@@ -453,6 +453,7 @@ class AnnexedFileMetadataModel(QtGui.QStandardItemModel):
         self._treeish = treeish
         self._pending = []
         tree = self._model.repo.annex.get_file_tree(self._treeish)
+        self.clear()
         self._build_tree(tree)
 
         self.endResetModel()
