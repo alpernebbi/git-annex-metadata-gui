@@ -329,6 +329,7 @@ class AnnexedDirectoryFieldItem(QtGui.QStandardItem):
         super().__init__()
         self._item = dir_item
         self._connected = False
+        self._column_data_cache = {}
 
         self.setSelectable(True)
         self.setEditable(False)
@@ -355,6 +356,9 @@ class AnnexedDirectoryFieldItem(QtGui.QStandardItem):
         return QtGui.QStandardItem.UserType + 6
 
     def data(self, role=Qt.Qt.DisplayRole):
+        if role in self._column_data_cache:
+            return self._column_data_cache[role]
+
         children = (
             self._item.child(row, self.column())
             for row in range(self._item.rowCount())
@@ -365,10 +369,16 @@ class AnnexedDirectoryFieldItem(QtGui.QStandardItem):
             if child:
                 responses.add(child.data(role=role))
             if len(responses) > 1:
-                return None
+                responses.clear()
+                break
 
         if responses:
-            return responses.pop()
+            data = responses.pop()
+        else:
+            data = None
+
+        self._column_data_cache[role] = data
+        return data
 
     def _propagate_changes(self, topLeft, bottomRight, roles):
         rows = range(topLeft.row(), bottomRight.row() + 1)
@@ -376,31 +386,32 @@ class AnnexedDirectoryFieldItem(QtGui.QStandardItem):
 
         parent = topLeft.parent()
         if parent != bottomRight.parent():
-            self.emitDataChanged()
+            self._emit_data_changed()
             return
 
         if parent != self._item.index():
             return
 
         if self.column() in columns:
-            self.emitDataChanged()
+            self._emit_data_changed()
 
     def _emit_data_changed(self):
+        self._column_data_cache.clear()
         self.emitDataChanged()
 
     def _on_rows_inserted(self, parent, first, last):
         if parent == self._item.index():
-            self.emitDataChanged()
+            self._emit_data_changed()
 
     def _on_rows_moved(self, parent, start, end, destination, row):
         if parent == self._item.index():
-            self.emitDataChanged()
+            self._emit_data_changed()
         if destination == self._item.index():
-            self.emitDataChanged()
+            self._emit_data_changed()
 
     def _on_rows_removed(self, parent, first, last):
         if parent == self._item.index():
-            self.emitDataChanged()
+            self._emit_data_changed()
 
     def __repr__(self):
         return "{name}.{cls}({args})".format(
