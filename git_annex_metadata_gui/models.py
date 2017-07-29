@@ -356,6 +356,16 @@ class AnnexedDirectoryFieldItem(QtGui.QStandardItem):
         return QtGui.QStandardItem.UserType + 6
 
     def data(self, role=Qt.Qt.DisplayRole):
+        if role == Qt.Qt.DisplayRole:
+            return self._column_data(role=role)
+
+        elif role == Qt.Qt.ToolTipRole:
+            return self._column_data(role=role)
+
+        else:
+            return super().data(role=role)
+
+    def _column_data(self, role=Qt.Qt.DisplayRole):
         if role in self._column_data_cache:
             return self._column_data_cache[role]
 
