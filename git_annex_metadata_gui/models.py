@@ -443,7 +443,8 @@ class AnnexedFileMetadataModel(QtGui.QStandardItemModel):
         self._model = model
         self.endResetModel()
 
-        self._model.columnsInserted.connect(self._on_columns_inserted)
+        model.columnsInserted.connect(self._on_columns_inserted)
+        model.headerDataChanged.connect(self._on_header_data_changed)
         self.setTreeish()
 
     @QtCore.pyqtSlot(str)
@@ -454,6 +455,7 @@ class AnnexedFileMetadataModel(QtGui.QStandardItemModel):
         self._pending = []
         tree = self._model.repo.annex.get_file_tree(self._treeish)
         self.clear()
+        self.setHorizontalHeaderLabels(['Filename'])
         self._build_tree(tree)
 
         self.endResetModel()
@@ -558,3 +560,8 @@ class AnnexedFileMetadataModel(QtGui.QStandardItemModel):
             child = parent.child(i)
             if isinstance(child, AnnexedDirectoryItem):
                 self._create_column(col, parent=child)
+
+    def _on_header_data_changed(self, orientation, first, last):
+        if orientation == Qt.Qt.Horizontal:
+            labels = ['Filename', *self._model.fields[1:]]
+            self.setHorizontalHeaderLabels(labels)
