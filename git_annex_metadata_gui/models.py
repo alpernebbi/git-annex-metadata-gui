@@ -252,7 +252,7 @@ class DataProxyItem(QtGui.QStandardItem):
         rows = range(topLeft.row(), bottomRight.row() + 1)
         columns = range(topLeft.column(), bottomRight.column() + 1)
 
-        if item.row() in rows and item.column() in columns:
+        if self._item.row() in rows and self._item.column() in columns:
             self.emitDataChanged()
 
     def __repr__(self):
@@ -271,6 +271,10 @@ class AnnexedFileItem(DataProxyItem):
         self.setSelectable(True)
         self.setEditable(False)
         self.setEnabled(True)
+
+    @property
+    def key(self):
+        return self._item.key
 
     def type(self):
         return QtGui.QStandardItem.UserType + 4
@@ -356,7 +360,8 @@ class AnnexedDirectoryFieldItem(QtGui.QStandardItem):
 
         responses = set()
         for child in children:
-            responses.add(child.data(role=role))
+            if child:
+                responses.add(child.data(role=role))
             if len(responses) > 1:
                 return None
 
@@ -415,6 +420,7 @@ class AnnexedFileMetadataModel(QtGui.QStandardItemModel):
         self._model = model
         self.endResetModel()
 
+        self._model.columnsInserted.connect(self._on_columns_inserted)
         self.setTreeish()
 
     @QtCore.pyqtSlot(str)
@@ -495,3 +501,36 @@ class AnnexedFileMetadataModel(QtGui.QStandardItemModel):
             for c in range(1, self._model.columnCount())
         )
         parent.appendRow([file_item, *field_items])
+
+    def _on_columns_inserted(self, parent, first, last):
+        columns = range(first, last + 1)
+
+        if first == 0:
+            return
+
+        for col in columns:
+            self._create_column(col)
+
+    def _create_column(self, col, parent=None):
+        if parent is None:
+            parent = self.invisibleRootItem()
+
+        def _create_field(item):
+            if isinstance(item, AnnexedFileItem):
+                obj = self._model.key_items.get(item.key)
+                field_item = self._model.item(obj.row(), col)
+                return DataProxyItem(field_item)
+
+            elif isinstance(item, AnnexedDirectoryItem):
+                return AnnexedDirectoryFieldItem(item)
+
+        field_items = [
+            _create_field(parent.child(i))
+            for i in range(parent.rowCount())
+        ]
+        parent.insertColumn(col, field_items)
+
+        for i in range(parent.rowCount()):
+            child = parent.child(i)
+            if isinstance(child, AnnexedDirectoryItem):
+                self._create_column(col, parent=child)
