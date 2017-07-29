@@ -282,6 +282,8 @@ class AnnexedFileItem(DataProxyItem):
     def data(self, role=Qt.Qt.DisplayRole):
         if role == Qt.Qt.DisplayRole:
             return self._name
+        if role == Qt.Qt.FontRole:
+            return QtGui.QStandardItem.data(self, role=role)
         else:
             return super().data(role=role)
 
