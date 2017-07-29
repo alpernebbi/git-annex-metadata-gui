@@ -21,15 +21,17 @@ from PyQt5 import QtWidgets
 from .main_window_ui import Ui_MainWindow
 
 
-class MainWindow(QtWidgets.QMainWindow):
-    _ui = Ui_MainWindow()
-
+class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.setupUi()
 
-    def setupUi(self):
-        self._ui.setupUi(self)
+    def setupUi(self, window=None):
+        if window is None:
+            window = self
+        super().setupUi(window)
 
-    def retranslateUi(self):
-        self._ui.retranslateUi(self)
+    def retranslateUi(self, window=None):
+        if window is None:
+            window = self
+        super().retranslateUi(window)
