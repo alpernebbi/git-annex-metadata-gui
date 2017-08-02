@@ -467,46 +467,74 @@ class AnnexedFileMetadataModel(QtGui.QStandardItemModel):
         self._treeish = treeish
         self._pending = []
         tree = self._model.repo.annex.get_file_tree(self._treeish)
+        self._pending_trees = [(tree, '', None)]
         self.clear()
         self.setHorizontalHeaderLabels(['Filename'])
-        self._build_tree(tree)
 
         self.endResetModel()
 
         QtCore.QMetaObject.invokeMethod(
-            self, '_populate',
+            self, '_build_tree',
             Qt.Qt.QueuedConnection,
         )
 
-    def _build_tree(self, tree, parent_item=None):
+    @QtCore.pyqtSlot()
+    def _build_tree(self):
         PendingFile = collections.namedtuple(
             'PendingFile',
             ['key', 'name', 'parent'],
         )
 
-        if parent_item is None:
-            parent_item = self.invisibleRootItem()
+        PendingTree = collections.namedtuple(
+            'PendingTree',
+            ['tree', 'name', 'parent'],
+        )
 
-        for name, obj in tree.items():
-            if isinstance(obj, pygit2.Blob):
-                pass
+        endtime = time.monotonic() + 0.1
+        while time.monotonic() < endtime:
+            if not self._pending_trees:
+                break
 
-            if isinstance(obj, AnnexedFile):
-                f = PendingFile(obj.key, name, parent_item)
-                self._pending.append(f)
+            tree, name, parent = self._pending_trees.pop()
 
-            elif isinstance(obj, AnnexedFileTree):
+            if parent:
                 item = AnnexedDirectoryItem(name)
                 field_items = [
                     AnnexedDirectoryFieldItem(item)
                     for c in range(1, self._model.columnCount())
                 ]
-                parent_item.appendRow([item, *field_items])
+                parent.appendRow([item, *field_items])
 
                 for field_item in field_items:
                     field_item._connect()
 
-                self._build_tree(obj, parent_item=item)
+            else:
+                item = self.invisibleRootItem()
+
+            for name_, obj in tree.items():
+                if isinstance(obj, pygit2.Blob):
+                    pass
+
+                elif isinstance(obj, AnnexedFile):
+                    f = PendingFile(obj.key, name_, item)
+                    self._pending.append(f)
+
+                elif isinstance(obj, AnnexedFileTree):
+                    t = PendingTree(obj, name_, item)
+                    self._pending_trees.append(t)
+
+        else:
+            QtCore.QMetaObject.invokeMethod(
+                self, '_build_tree',
+                Qt.Qt.QueuedConnection,
+            )
+            return
+
+        if self._pending:
+            QtCore.QMetaObject.invokeMethod(
+                self, '_populate',
+                Qt.Qt.QueuedConnection,
+            )
 
     @QtCore.pyqtSlot()
     def _populate(self):
