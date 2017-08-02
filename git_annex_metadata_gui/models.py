@@ -166,6 +166,7 @@ class AnnexedKeyMetadataModel(QtGui.QStandardItemModel):
         self.key_items = {}
         self._pending = iter(self.repo.annex.values())
         self.clear()
+        self.setHorizontalHeaderLabels(self.fields)
 
         self.endResetModel()
 
