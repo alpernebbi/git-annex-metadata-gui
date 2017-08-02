@@ -156,6 +156,7 @@ class AnnexedFieldItem(QtGui.QStandardItem):
 class AnnexedKeyMetadataModel(QtGui.QStandardItemModel):
     def __init__(self, parent=None):
         super().__init__(parent)
+        self.repo = None
 
     def setRepo(self, repo):
         self.beginResetModel()
@@ -437,6 +438,7 @@ class AnnexedDirectoryFieldItem(QtGui.QStandardItem):
 class AnnexedFileMetadataModel(QtGui.QStandardItemModel):
     def __init__(self, parent=None):
         super().__init__(parent)
+        self._treeish = None
 
     def setSourceModel(self, model):
         self.beginResetModel()
@@ -445,10 +447,20 @@ class AnnexedFileMetadataModel(QtGui.QStandardItemModel):
 
         model.columnsInserted.connect(self._on_columns_inserted)
         model.headerDataChanged.connect(self._on_header_data_changed)
-        self.setTreeish()
+        model.modelReset.connect(self.setTreeish)
 
+        if self._model.repo:
+            self.setTreeish()
+
+    @QtCore.pyqtSlot()
     @QtCore.pyqtSlot(str)
-    def setTreeish(self, treeish='HEAD'):
+    def setTreeish(self, treeish=None):
+        if treeish is None:
+            treeish = self._treeish
+
+        if treeish is None:
+            treeish = 'HEAD'
+
         self.beginResetModel()
 
         self._treeish = treeish
