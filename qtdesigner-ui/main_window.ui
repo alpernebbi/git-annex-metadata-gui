@@ -199,5 +199,6 @@
   <slot>refresh_headers()</slot>
   <slot>set_header_visible(QString)</slot>
   <slot>set_header_hidden(QString)</slot>
+  <slot>add_new_column(QString)</slot>
  </slots>
 </ui>

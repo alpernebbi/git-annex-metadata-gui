@@ -103,3 +103,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
     @QtCore.pyqtSlot(str)
     def set_header_hidden(self, header_title):
         self.set_header_visible(header_title, visible=False)
+
+    @QtCore.pyqtSlot(str)
+    def add_new_column(self, header_title):
+        self.model_keys.insert_field(header_title)
