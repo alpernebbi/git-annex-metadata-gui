@@ -72,6 +72,10 @@ class AnnexedKeyItem(QtGui.QStandardItem):
     def key(self):
         return self._obj.key
 
+    @property
+    def contentlocation(self):
+        return self._obj.contentlocation
+
     def type(self):
         return QtGui.QStandardItem.UserType + 1
 
@@ -92,6 +96,14 @@ class AnnexedFieldItem(QtGui.QStandardItem):
         self.setSelectable(True)
         self.setEditable(True)
         self.setEnabled(True)
+
+    @property
+    def key(self):
+        return self._item.key
+
+    @property
+    def contentlocation(self):
+        return self._item.contentlocation
 
     @property
     def metadata(self):
@@ -278,6 +290,10 @@ class AnnexedFileItem(DataProxyItem):
     def key(self):
         return self._item.key
 
+    @property
+    def contentlocation(self):
+        return self._item.contentlocation
+
     def type(self):
         return QtGui.QStandardItem.UserType + 4
 
@@ -300,6 +316,16 @@ class AnnexedFileItem(DataProxyItem):
         )
 
 
+class AnnexedFileFieldItem(DataProxyItem):
+    @property
+    def key(self):
+        return self._item.key
+
+    @property
+    def contentlocation(self):
+        return self._item.contentlocation
+
+
 class AnnexedDirectoryItem(QtGui.QStandardItem):
     def __init__(self, dirname):
         super().__init__()
@@ -316,7 +342,7 @@ class AnnexedDirectoryItem(QtGui.QStandardItem):
         self.setEnabled(True)
 
     def type(self):
-        return QtGui.QStandardItem.UserType + 5
+        return QtGui.QStandardItem.UserType + 6
 
     def __repr__(self):
         return "{name}.{cls}({args})".format(
@@ -355,7 +381,7 @@ class AnnexedDirectoryFieldItem(QtGui.QStandardItem):
         self._connected = True
 
     def type(self):
-        return QtGui.QStandardItem.UserType + 6
+        return QtGui.QStandardItem.UserType + 7
 
     def data(self, role=Qt.Qt.DisplayRole):
         if role == Qt.Qt.DisplayRole:
@@ -564,7 +590,7 @@ class AnnexedFileMetadataModel(QtGui.QStandardItemModel):
 
         file_item = AnnexedFileItem(obj, name)
         field_items = (
-            DataProxyItem(self._model.item(obj.row(), c))
+            AnnexedFileFieldItem(self._model.item(obj.row(), c))
             for c in range(1, self._model.columnCount())
         )
         parent.appendRow([file_item, *field_items])
@@ -586,7 +612,7 @@ class AnnexedFileMetadataModel(QtGui.QStandardItemModel):
             if isinstance(item, AnnexedFileItem):
                 obj = self._model.key_items.get(item.key)
                 field_item = self._model.item(obj.row(), col)
-                return DataProxyItem(field_item)
+                return AnnexedFileFieldItem(field_item)
 
             elif isinstance(item, AnnexedDirectoryItem):
                 return AnnexedDirectoryFieldItem(item)
