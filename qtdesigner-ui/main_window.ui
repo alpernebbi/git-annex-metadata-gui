@@ -105,7 +105,16 @@
     <addaction name="action_refresh"/>
     <addaction name="action_exit"/>
    </widget>
+   <widget class="QMenu" name="menu_headers">
+    <property name="enabled">
+     <bool>false</bool>
+    </property>
+    <property name="title">
+     <string>Headers</string>
+    </property>
+   </widget>
    <addaction name="menu_file"/>
+   <addaction name="menu_headers"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
   <action name="action_open">
@@ -187,5 +196,8 @@
  <slots>
   <slot>open_repo()</slot>
   <slot>refresh_repo()</slot>
+  <slot>refresh_headers()</slot>
+  <slot>set_header_visible(QString)</slot>
+  <slot>set_header_hidden(QString)</slot>
  </slots>
 </ui>

@@ -16,6 +16,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
+import functools
+
 from PyQt5 import QtCore
 from PyQt5 import QtWidgets
 
@@ -43,6 +45,8 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         proxy_head.setSourceModel(self.model_head)
         self.view_head.setModel(proxy_head)
 
+        self.model_keys.headerDataChanged.connect(self.refresh_headers)
+
     def setupUi(self, window=None):
         if window is None:
             window = self
@@ -65,3 +69,37 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         if self.repo:
             self.model_keys.setRepo(self.repo)
 
+    @QtCore.pyqtSlot()
+    def refresh_headers(self):
+        headers = self.model_keys.fields[1:]
+        self.menu_headers.clear()
+
+        header = self.view_keys.horizontalHeader()
+
+        for idx, h in enumerate(headers):
+            hidden = header.isSectionHidden(idx + 1)
+
+            action = QtWidgets.QAction(self)
+            action.setText(h)
+            action.setCheckable(True)
+            action.setChecked(not hidden)
+            action.triggered.connect(
+                functools.partial(self.set_header_visible, h),
+            )
+
+            self.menu_headers.addAction(action)
+
+        empty = not headers
+        self.menu_headers.setDisabled(empty)
+
+    @QtCore.pyqtSlot(str)
+    def set_header_visible(self, header_title, visible=True):
+        idx = self.model_keys.fields.index(header_title)
+        header_keys = self.view_keys.horizontalHeader()
+        header_keys.setSectionHidden(idx, not visible)
+        header_head = self.view_head.header()
+        header_head.setSectionHidden(idx, not visible)
+
+    @QtCore.pyqtSlot(str)
+    def set_header_hidden(self, header_title):
+        self.set_header_visible(header_title, visible=False)
