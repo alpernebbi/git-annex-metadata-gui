@@ -17,8 +17,11 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 import functools
+import mimetypes
 
+from PyQt5 import Qt
 from PyQt5 import QtCore
+from PyQt5 import QtGui
 from PyQt5 import QtWidgets
 
 from git_annex_adapter.repo import GitAnnexRepo
@@ -46,6 +49,18 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self.view_head.setModel(proxy_head)
 
         self.model_keys.headerDataChanged.connect(self.refresh_headers)
+
+        self.view_keys.selectionModel().selectionChanged.connect(
+           self._on_selection_changed
+        )
+        self.view_head.selectionModel().selectionChanged.connect(
+            self._on_selection_changed
+        )
+
+        self.menu_docks.addAction(
+            self.dock_preview.toggleViewAction()
+        )
+
 
     def setupUi(self, window=None):
         if window is None:
@@ -107,3 +122,98 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
     @QtCore.pyqtSlot(str)
     def add_new_column(self, header_title):
         self.model_keys.insert_field(header_title)
+
+    @QtCore.pyqtSlot()
+    def clear_preview(self):
+        self.text_preview.clear()
+
+        old_scene = self.graphics_preview.scene()
+        if old_scene:
+            old_scene.clear()
+            old_scene.deleteLater()
+
+    @QtCore.pyqtSlot(str)
+    def preview_text_file(self, path):
+        page = self.page_text_preview
+        self.stack_preview.setCurrentWidget(page)
+
+        with open(path, 'r') as file:
+            text = file.read()
+        self.text_preview.setPlainText(text)
+
+    @QtCore.pyqtSlot(str)
+    def preview_image_file(self, path):
+        page = self.page_graphics_preview
+        self.stack_preview.setCurrentWidget(page)
+
+        scene = QtWidgets.QGraphicsScene(self)
+        self.graphics_preview.setScene(scene)
+
+        # Using QImage instead of directly creating the QPixmap
+        # prevents a segmentation fault in my container setup
+        image = QtGui.QImage(path)
+        if image.isNull():
+            return
+
+        pixmap = QtGui.QPixmap.fromImage(image)
+        if pixmap.isNull():
+            return
+
+        pixmap_item = QtWidgets.QGraphicsPixmapItem(pixmap)
+        scene.addItem(pixmap_item)
+        self.graphics_preview.fitInView(
+            pixmap_item,
+            Qt.Qt.KeepAspectRatio,
+        )
+
+    def _on_selection_changed(self, selected, deselected):
+        self.clear_preview()
+
+        indexes = selected.indexes()
+        if not indexes:
+            return
+
+        index = indexes[0]
+        src_index = index.model().mapToSource(index)
+        item = src_index.model().itemFromIndex(src_index)
+
+        if self.dock_preview.isVisible():
+            self._preview_item(item)
+
+    def _preview_item(self, item):
+        mime = self._mime_from_item(item)
+
+        if not mime:
+            return
+
+        path = item.contentlocation
+
+        if mime.startswith('text/'):
+            self.preview_text_file(path)
+
+        elif mime.startswith('image/'):
+            self.preview_image_file(path)
+
+    def _mime_from_item(self, item):
+        try:
+            path = item.contentlocation
+        except AttributeError:
+            return None
+        if not path:
+            return None
+
+        try:
+            name = item.name
+        except AttributeError:
+            name = None
+
+        mime, encoding = None, None
+        if name:
+            mime, encoding = mimetypes.guess_type(name)
+        if not mime:
+            mime, encoding = mimetypes.guess_type(path)
+        if encoding:
+            return None
+
+        return mime
+

@@ -113,10 +113,58 @@
      <string>Headers</string>
     </property>
    </widget>
+   <widget class="QMenu" name="menu_docks">
+    <property name="title">
+     <string>Docks</string>
+    </property>
+   </widget>
    <addaction name="menu_file"/>
    <addaction name="menu_headers"/>
+   <addaction name="menu_docks"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
+  <widget class="QDockWidget" name="dock_preview">
+   <property name="windowTitle">
+    <string>File Preview</string>
+   </property>
+   <attribute name="dockWidgetArea">
+    <number>2</number>
+   </attribute>
+   <widget class="QWidget" name="dock_preview_contents">
+    <layout class="QGridLayout" name="gridLayout">
+     <item row="0" column="0">
+      <widget class="QStackedWidget" name="stack_preview">
+       <widget class="QWidget" name="page_text_preview">
+        <layout class="QGridLayout" name="gridLayout_2">
+         <item row="0" column="0">
+          <widget class="QPlainTextEdit" name="text_preview">
+           <property name="font">
+            <font>
+             <family>Monospace</family>
+            </font>
+           </property>
+           <property name="lineWrapMode">
+            <enum>QPlainTextEdit::NoWrap</enum>
+           </property>
+           <property name="readOnly">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+       <widget class="QWidget" name="page_graphics_preview">
+        <layout class="QGridLayout" name="gridLayout_3">
+         <item row="0" column="0">
+          <widget class="QGraphicsView" name="graphics_preview"/>
+         </item>
+        </layout>
+       </widget>
+      </widget>
+     </item>
+    </layout>
+   </widget>
+  </widget>
   <action name="action_open">
    <property name="text">
     <string>&amp;Open</string>
