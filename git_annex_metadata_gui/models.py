@@ -17,6 +17,7 @@
 import ast
 import bisect
 import collections
+import functools
 import time
 import types
 import pygit2
@@ -43,6 +44,32 @@ def parse_as_set(x):
         fmt = "Can't interpret '{}' as a set."
         msg = fmt.format(x)
         raise ValueError(msg) from err
+
+
+def automatically_consumed(function):
+    generator = None
+
+    @functools.wraps(function)
+    def wrapper(instance):
+        nonlocal generator
+        if generator is None:
+            generator = function(instance)
+
+        try:
+            endtime = time.monotonic() + 0.1
+            while time.monotonic() < endtime:
+                next(generator)
+
+        except StopIteration:
+            generator = None
+
+        else:
+            QtCore.QMetaObject.invokeMethod(
+                instance, function.__name__,
+                Qt.Qt.QueuedConnection,
+            )
+
+    return wrapper
 
 
 class AnnexedKeyItem(QtGui.QStandardItem):
@@ -181,28 +208,15 @@ class AnnexedKeyMetadataModel(QtGui.QStandardItemModel):
         self.setHorizontalHeaderLabels(self.fields)
 
         self.endResetModel()
+        self._populate()
 
-        QtCore.QMetaObject.invokeMethod(
-            self, '_populate',
-            Qt.Qt.QueuedConnection,
-        )
 
     @QtCore.pyqtSlot()
+    @automatically_consumed
     def _populate(self):
-        try:
-            endtime = time.monotonic() + 0.1
-            while time.monotonic() < endtime:
-                obj = next(self._pending)
-                self.insert_key(obj)
-
-        except StopIteration:
-            pass
-
-        else:
-            QtCore.QMetaObject.invokeMethod(
-                self, '_populate',
-                Qt.Qt.QueuedConnection,
-            )
+        for obj in self._pending:
+            self.insert_key(obj)
+            yield
 
     def insert_key(self, key_obj):
         key_item = AnnexedKeyItem(key_obj)
@@ -510,13 +524,10 @@ class AnnexedFileMetadataModel(QtGui.QStandardItemModel):
         self.setHorizontalHeaderLabels(['Filename'])
 
         self.endResetModel()
-
-        QtCore.QMetaObject.invokeMethod(
-            self, '_build_tree',
-            Qt.Qt.QueuedConnection,
-        )
+        self._build_tree()
 
     @QtCore.pyqtSlot()
+    @automatically_consumed
     def _build_tree(self):
         PendingFile = collections.namedtuple(
             'PendingFile',
@@ -528,11 +539,7 @@ class AnnexedFileMetadataModel(QtGui.QStandardItemModel):
             ['tree', 'name', 'parent'],
         )
 
-        endtime = time.monotonic() + 0.1
-        while time.monotonic() < endtime:
-            if not self._pending_trees:
-                break
-
+        while self._pending_trees:
             tree, name, parent = self._pending_trees.pop()
 
             if parent:
@@ -561,40 +568,22 @@ class AnnexedFileMetadataModel(QtGui.QStandardItemModel):
                     t = PendingTree(obj, name_, item)
                     self._pending_trees.append(t)
 
-        else:
-            QtCore.QMetaObject.invokeMethod(
-                self, '_build_tree',
-                Qt.Qt.QueuedConnection,
-            )
-            return
+            yield
 
         if self._pending:
-            QtCore.QMetaObject.invokeMethod(
-                self, '_populate',
-                Qt.Qt.QueuedConnection,
-            )
+            self._populate()
 
     @QtCore.pyqtSlot()
+    @automatically_consumed
     def _populate(self):
-        try:
-            items = iter(self._pending)
-            endtime = time.monotonic() + 0.1
-            while time.monotonic() < endtime:
-                file = next(items)
+        while self._pending:
+            for file in iter(self._pending):
                 obj = self._model.key_items.get(file.key)
 
                 if obj:
                     self.insert_file(obj, file.name, file.parent)
                     self._pending.remove(file)
-
-        except StopIteration:
-            pass
-
-        if self._pending:
-            QtCore.QMetaObject.invokeMethod(
-                self, '_populate',
-                Qt.Qt.QueuedConnection,
-            )
+                yield
 
     def insert_file(self, obj, name, parent=None):
         if parent is None:
