@@ -18,6 +18,7 @@ import ast
 import bisect
 import collections
 import functools
+import random
 import time
 import types
 import pygit2
@@ -570,20 +571,13 @@ class AnnexedFileMetadataModel(QtGui.QStandardItemModel):
 
             yield
 
-        if self._pending:
-            self._populate()
-
-    @QtCore.pyqtSlot()
-    @automatically_consumed
-    def _populate(self):
         while self._pending:
-            for file in iter(self._pending):
-                obj = self._model.key_items.get(file.key)
-
-                if obj:
-                    self.insert_file(obj, file.name, file.parent)
-                    self._pending.remove(file)
-                yield
+            file = random.choice(self._pending)
+            if file.key in self._model.key_items:
+                obj = self._model.key_items[file.key]
+                self.insert_file(obj, file.name, file.parent)
+                self._pending.remove(file)
+            yield
 
     def insert_file(self, obj, name, parent=None):
         if parent is None:
