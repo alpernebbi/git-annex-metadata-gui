@@ -28,7 +28,7 @@ gui: $(PYUI)
 
 design:
 	PYQTDESIGNERPATH=qtdesigner-plugins \
-	PYTHONPATH=. \
+	PYTHONPATH=git_annex_metadata_gui \
 		designer qtdesigner-ui/main_window.ui \
 		>/dev/null 2>&1 &
 
