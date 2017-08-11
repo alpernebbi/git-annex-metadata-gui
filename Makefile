@@ -32,7 +32,12 @@ design:
 		designer qtdesigner-ui/main_window.ui \
 		>/dev/null 2>&1 &
 
+design-plugins:
+	PYQTDESIGNERPATH=qtdesigner-plugins \
+	PYTHONPATH=git_annex_metadata_gui \
+		designer
+
 test:
 	python3 -m "unittest" -vb
 
-.PHONY: all gui design test
+.PHONY: all gui design design-plugins test
