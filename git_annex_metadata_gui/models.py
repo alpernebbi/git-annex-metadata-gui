@@ -254,8 +254,8 @@ class AnnexedKeyMetadataModel(QtGui.QStandardItemModel):
             AnnexedFieldItem(self.item(row, 0), field)
             for row in range(self.rowCount())
         ]
-        self.insertColumn(col, items)
         self.fields.insert(col, field)
+        self.insertColumn(col, items)
         self.setHorizontalHeaderLabels(self.fields)
 
     def __repr__(self):
