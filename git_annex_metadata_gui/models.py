@@ -166,6 +166,9 @@ class AnnexedFieldItem(QtGui.QStandardItem):
             if data:
                 return str(data)
 
+        elif role == Qt.Qt.UserRole:
+            return self.metadata
+
         else:
             return super().data(role=role)
 
@@ -176,6 +179,12 @@ class AnnexedFieldItem(QtGui.QStandardItem):
         elif role == Qt.Qt.EditRole:
             try:
                 self.metadata = parse_as_set(value)
+            except:
+                return
+
+        elif role == Qt.Qt.UserRole:
+            try:
+                self.metadata = value
             except:
                 return
 
