@@ -68,7 +68,7 @@ class FieldItemEdit(QtWidgets.QWidget):
         self._values.extend(new_values)
 
         while self.widget_count() > len(self._values):
-            child = self.layout().takeAt(0)
+            child = self.layout().takeAt(self.widget_count() - 1)
             widget = child.widget()
             widget.deleteLater()
 
@@ -85,6 +85,11 @@ class FieldItemEdit(QtWidgets.QWidget):
                 widget.setText(self._values[idx])
             else:
                 widget.setText('')
+
+        for idx in range(1, self.layout().count()):
+            left = self.layout().itemAt(idx - 1).widget()
+            right = self.layout().itemAt(idx).widget()
+            self.setTabOrder(left, right)
 
     def _on_editing_finished(self):
         values = []
