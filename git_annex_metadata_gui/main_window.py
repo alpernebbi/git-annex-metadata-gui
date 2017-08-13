@@ -86,6 +86,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
     def refresh_repo(self):
         if self.repo:
             self.model_keys.setRepo(self.repo)
+            self._clear_metadata_edit()
 
     @QtCore.pyqtSlot()
     def refresh_headers(self):
@@ -222,8 +223,11 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
 
         return mime
 
+    def _clear_metadata_edit(self):
+        self._metadata_edit_item(None)
+
     def _metadata_edit_item(self, item):
-        if not hasattr(item, 'key'):
+        if item is not None and not hasattr(item, 'key'):
             return
 
         new_edit = MetadataEdit(

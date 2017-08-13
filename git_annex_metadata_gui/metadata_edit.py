@@ -45,6 +45,7 @@ class MetadataEdit(QtWidgets.QGroupBox):
 
         model = self._item.model()
         model.columnsInserted.connect(self.update_fields)
+        model.modelReset.connect(self.invalidate)
         self.new_field_requested.connect(model.insert_field)
 
         line_edit = AutoSizeLineEdit()
@@ -54,10 +55,16 @@ class MetadataEdit(QtWidgets.QGroupBox):
 
         self.update_fields()
 
+    def invalidate(self):
+        self._item = None
+
     def field_count(self):
         return self.layout().rowCount() - 1
 
     def update_fields(self):
+        if self._item is None:
+            return
+
         model = self._item.model()
         parent = self._item.parent()
         if not parent:
