@@ -515,6 +515,14 @@ class AnnexedFileMetadataModel(QtGui.QStandardItemModel):
         if self._model.repo:
             self.setTreeish()
 
+    @property
+    def fields(self):
+        return self._model.fields
+
+    @QtCore.pyqtSlot(str)
+    def insert_field(self, field):
+        return self._model.insert_field(field)
+
     @QtCore.pyqtSlot()
     @QtCore.pyqtSlot(str)
     def setTreeish(self, treeish=None):

@@ -52,12 +52,16 @@ class MetadataEdit(QtWidgets.QGroupBox):
 
     def update_fields(self):
         model = self._item.model()
+        parent = self._item.parent()
+        if not parent:
+            parent = model.invisibleRootItem()
+        row = self._item.row()
 
         for col, field in enumerate(model.fields[1:], 1):
             if field in self._fields:
                 continue
             self._fields.append(field)
-            field_item = model.item(self._item.row(), col)
+            field_item = parent.child(row, col)
             self.layout().insertRow(
                 self.field_count(),
                 "{}: ".format(field),
