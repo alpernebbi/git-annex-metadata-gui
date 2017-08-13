@@ -228,7 +228,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
 
     def _metadata_edit_item(self, item):
         if item is not None and not hasattr(item, 'key'):
-            return
+            item = None
 
         new_edit = MetadataEdit(
             parent=self.dock_metadata_contents,
