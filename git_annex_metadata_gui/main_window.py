@@ -86,6 +86,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
     def refresh_repo(self):
         if self.repo:
             self.model_keys.setRepo(self.repo)
+            self.clear_preview()
             self._clear_metadata_edit()
 
     @QtCore.pyqtSlot()
