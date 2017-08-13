@@ -82,6 +82,11 @@ class MetadataEdit(QtWidgets.QGroupBox):
                 FieldItemEdit(field_item, parent=self),
             )
 
+    def setTitle(self, title):
+        if len(title) > 48:
+            title = "{:.45}...".format(title)
+        super().setTitle(title)
+
     def _on_editing_finished(self):
         field = self._new_field_edit.text()
         if field:
