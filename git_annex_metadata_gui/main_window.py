@@ -29,6 +29,7 @@ from git_annex_adapter.repo import GitAnnexRepo
 from .models import AnnexedKeyMetadataModel
 from .models import AnnexedFileMetadataModel
 from .main_window_ui import Ui_MainWindow
+from .metadata_edit import MetadataEdit
 
 
 class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
@@ -60,7 +61,9 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self.menu_docks.addAction(
             self.dock_preview.toggleViewAction()
         )
-
+        self.menu_docks.addAction(
+            self.dock_metadata.toggleViewAction()
+        )
 
     def setupUi(self, window=None):
         if window is None:
@@ -179,6 +182,8 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
 
         if self.dock_preview.isVisible():
             self._preview_item(item)
+        if self.dock_metadata.isVisible():
+            self._metadata_edit_item(item)
 
     def _preview_item(self, item):
         mime = self._mime_from_item(item)
@@ -217,3 +222,19 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
 
         return mime
 
+    def _metadata_edit_item(self, item):
+        if not hasattr(item, 'key'):
+            return
+
+        new_edit = MetadataEdit(
+            parent=self.dock_metadata_contents,
+            item=item,
+        )
+
+        layout = self.dock_metadata_contents.layout()
+        old = layout.replaceWidget(self.metadata_edit, new_edit)
+        old.widget().deleteLater()
+        self.metadata_edit = new_edit
+
+        if hasattr(item, 'name'):
+            self.metadata_edit.setTitle(item.name)

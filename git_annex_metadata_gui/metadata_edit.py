@@ -28,17 +28,20 @@ except ImportError:
 class MetadataEdit(QtWidgets.QGroupBox):
     new_field_requested = QtCore.pyqtSignal(str)
 
-    def __init__(self, key_item, parent=None):
+    def __init__(self, parent=None, item=None):
         super().__init__(parent)
-        self._item = key_item
+        self._item = item
         self._fields = []
-
-        self.setTitle(key_item.key)
 
         layout = QtWidgets.QFormLayout(self)
         growth_policy = QtWidgets.QFormLayout.FieldsStayAtSizeHint
         layout.setFieldGrowthPolicy(growth_policy)
         self.setLayout(layout)
+
+        if item is None:
+            return
+
+        self.setTitle(item.key)
 
         model = self._item.model()
         model.columnsInserted.connect(self.update_fields)

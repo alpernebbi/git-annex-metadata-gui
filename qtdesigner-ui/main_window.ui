@@ -165,6 +165,21 @@
     </layout>
    </widget>
   </widget>
+  <widget class="QDockWidget" name="dock_metadata">
+   <property name="windowTitle">
+    <string>Metadata Editor</string>
+   </property>
+   <attribute name="dockWidgetArea">
+    <number>2</number>
+   </attribute>
+   <widget class="QWidget" name="dock_metadata_contents">
+    <layout class="QGridLayout" name="gridLayout_4">
+     <item row="0" column="0">
+      <widget class="MetadataEdit" name="metadata_edit"/>
+     </item>
+    </layout>
+   </widget>
+  </widget>
   <action name="action_open">
    <property name="text">
     <string>&amp;Open</string>
@@ -190,6 +205,13 @@
    </property>
   </action>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>MetadataEdit</class>
+   <extends>QGroupBox</extends>
+   <header>git_annex_metadata_gui.metadata_edit</header>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections>
   <connection>
