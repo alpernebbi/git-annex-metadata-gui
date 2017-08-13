@@ -54,7 +54,7 @@ class AutoSizeLineEditPlugin(QtDesigner.QPyDesignerCustomWidgetPlugin):
         return False
 
     def includeFile(self):
-        return "auto_size_line_edit"
+        return "git_annex_metadata_gui.auto_size_line_edit"
 
     def domXml(self):
         cls = self.name()

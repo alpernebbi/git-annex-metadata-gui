@@ -18,8 +18,12 @@ from PyQt5 import Qt
 from PyQt5 import QtCore
 from PyQt5 import QtWidgets
 
-from auto_size_line_edit import AutoSizeLineEdit
-from field_item_edit import FieldItemEdit
+try:
+    from .auto_size_line_edit import AutoSizeLineEdit
+    from .field_item_edit import FieldItemEdit
+except ImportError:
+    from auto_size_line_edit import AutoSizeLineEdit
+    from field_item_edit import FieldItemEdit
 
 class MetadataEdit(QtWidgets.QGroupBox):
     new_field_requested = QtCore.pyqtSignal(str)

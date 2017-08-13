@@ -61,7 +61,7 @@ class MetadataEditPlugin(QtDesigner.QPyDesignerCustomWidgetPlugin):
         return False
 
     def includeFile(self):
-        return "metadata_edit"
+        return "git_annex_metadata_gui.metadata_edit"
 
     def domXml(self):
         cls = self.name()

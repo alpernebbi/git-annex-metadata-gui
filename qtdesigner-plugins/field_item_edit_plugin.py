@@ -56,7 +56,7 @@ class FieldItemEditPlugin(QtDesigner.QPyDesignerCustomWidgetPlugin):
         return False
 
     def includeFile(self):
-        return "field_item_edit"
+        return "git_annex_metadata_gui.field_item_edit"
 
     def domXml(self):
         cls = self.name()
