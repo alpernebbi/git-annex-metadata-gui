@@ -96,6 +96,7 @@ class FilePreview(QtWidgets.QStackedWidget):
         mime = self._mime_from_item(item)
 
         if not mime:
+            self.clear()
             return
 
         path = item.contentlocation
