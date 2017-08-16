@@ -117,6 +117,8 @@
     <property name="title">
      <string>Docks</string>
     </property>
+    <addaction name="action_dock_preview"/>
+    <addaction name="action_dock_metadata"/>
    </widget>
    <addaction name="menu_file"/>
    <addaction name="menu_headers"/>
@@ -192,6 +194,28 @@
     <string>F5</string>
    </property>
   </action>
+  <action name="action_dock_preview">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>File Preview</string>
+   </property>
+  </action>
+  <action name="action_dock_metadata">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Metadata Editor</string>
+   </property>
+  </action>
  </widget>
  <customwidgets>
   <customwidget>
@@ -252,6 +276,70 @@
     <hint type="destinationlabel">
      <x>399</x>
      <y>299</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>action_dock_metadata</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>dock_metadata</receiver>
+   <slot>setVisible(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>662</x>
+     <y>457</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>action_dock_preview</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>dock_preview</receiver>
+   <slot>setVisible(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>662</x>
+     <y>178</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>dock_metadata</sender>
+   <signal>visibilityChanged(bool)</signal>
+   <receiver>action_dock_metadata</receiver>
+   <slot>setChecked(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>662</x>
+     <y>457</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>dock_preview</sender>
+   <signal>visibilityChanged(bool)</signal>
+   <receiver>action_dock_preview</receiver>
+   <slot>setChecked(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>662</x>
+     <y>178</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>-1</x>
+     <y>-1</y>
     </hint>
    </hints>
   </connection>

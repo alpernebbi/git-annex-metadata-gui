@@ -57,13 +57,6 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
             self._on_selection_changed
         )
 
-        self.menu_docks.addAction(
-            self.dock_preview.toggleViewAction()
-        )
-        self.menu_docks.addAction(
-            self.dock_metadata.toggleViewAction()
-        )
-
     def setupUi(self, window=None):
         if window is None:
             window = self

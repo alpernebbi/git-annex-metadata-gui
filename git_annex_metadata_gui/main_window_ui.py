@@ -107,9 +107,19 @@ class Ui_MainWindow(object):
         self.action_exit.setObjectName("action_exit")
         self.action_refresh = QtWidgets.QAction(MainWindow)
         self.action_refresh.setObjectName("action_refresh")
+        self.action_dock_preview = QtWidgets.QAction(MainWindow)
+        self.action_dock_preview.setCheckable(True)
+        self.action_dock_preview.setChecked(True)
+        self.action_dock_preview.setObjectName("action_dock_preview")
+        self.action_dock_metadata = QtWidgets.QAction(MainWindow)
+        self.action_dock_metadata.setCheckable(True)
+        self.action_dock_metadata.setChecked(True)
+        self.action_dock_metadata.setObjectName("action_dock_metadata")
         self.menu_file.addAction(self.action_open)
         self.menu_file.addAction(self.action_refresh)
         self.menu_file.addAction(self.action_exit)
+        self.menu_docks.addAction(self.action_dock_preview)
+        self.menu_docks.addAction(self.action_dock_metadata)
         self.menubar.addAction(self.menu_file.menuAction())
         self.menubar.addAction(self.menu_headers.menuAction())
         self.menubar.addAction(self.menu_docks.menuAction())
@@ -119,6 +129,10 @@ class Ui_MainWindow(object):
         self.action_exit.triggered.connect(MainWindow.close)
         self.action_refresh.triggered.connect(MainWindow.refresh_repo)
         self.action_open.triggered.connect(MainWindow.open_repo)
+        self.action_dock_metadata.toggled['bool'].connect(self.dock_metadata.setVisible)
+        self.action_dock_preview.toggled['bool'].connect(self.dock_preview.setVisible)
+        self.dock_metadata.visibilityChanged['bool'].connect(self.action_dock_metadata.setChecked)
+        self.dock_preview.visibilityChanged['bool'].connect(self.action_dock_preview.setChecked)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
 
     def retranslateUi(self, MainWindow):
@@ -137,6 +151,8 @@ class Ui_MainWindow(object):
         self.action_exit.setShortcut(_translate("MainWindow", "Ctrl+Q"))
         self.action_refresh.setText(_translate("MainWindow", "&Refresh"))
         self.action_refresh.setShortcut(_translate("MainWindow", "F5"))
+        self.action_dock_preview.setText(_translate("MainWindow", "File Preview"))
+        self.action_dock_metadata.setText(_translate("MainWindow", "Metadata Editor"))
 
 from git_annex_metadata_gui.file_preview import FilePreview
 from git_annex_metadata_gui.metadata_edit import MetadataEdit
