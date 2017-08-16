@@ -24,7 +24,7 @@ class Ui_MainWindow(object):
         self.verticalLayout = QtWidgets.QVBoxLayout(self.tab_keys)
         self.verticalLayout.setContentsMargins(0, 0, 0, 0)
         self.verticalLayout.setObjectName("verticalLayout")
-        self.view_keys = QtWidgets.QTableView(self.tab_keys)
+        self.view_keys = MetadataTableView(self.tab_keys)
         self.view_keys.setAlternatingRowColors(True)
         self.view_keys.setHorizontalScrollMode(QtWidgets.QAbstractItemView.ScrollPerPixel)
         self.view_keys.setShowGrid(False)
@@ -42,7 +42,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_2 = QtWidgets.QVBoxLayout(self.tab_head)
         self.verticalLayout_2.setContentsMargins(0, 0, 0, 0)
         self.verticalLayout_2.setObjectName("verticalLayout_2")
-        self.view_head = QtWidgets.QTreeView(self.tab_head)
+        self.view_head = MetadataTreeView(self.tab_head)
         self.view_head.setUniformRowHeights(True)
         self.view_head.setSortingEnabled(True)
         self.view_head.setObjectName("view_head")
@@ -133,6 +133,10 @@ class Ui_MainWindow(object):
         self.action_dock_preview.toggled['bool'].connect(self.dock_preview.setVisible)
         self.dock_metadata.visibilityChanged['bool'].connect(self.action_dock_metadata.setChecked)
         self.dock_preview.visibilityChanged['bool'].connect(self.action_dock_preview.setChecked)
+        self.view_head.item_selected['QStandardItem'].connect(self.stack_preview.preview_item)
+        self.view_keys.item_selected['QStandardItem'].connect(self.stack_preview.preview_item)
+        self.view_head.item_selected['QStandardItem'].connect(self.metadata_edit.set_item)
+        self.view_keys.item_selected['QStandardItem'].connect(self.metadata_edit.set_item)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
 
     def retranslateUi(self, MainWindow):
@@ -156,3 +160,5 @@ class Ui_MainWindow(object):
 
 from git_annex_metadata_gui.file_preview import FilePreview
 from git_annex_metadata_gui.metadata_edit import MetadataEdit
+from git_annex_metadata_gui.metadata_table_view import MetadataTableView
+from git_annex_metadata_gui.metadata_tree_view import MetadataTreeView

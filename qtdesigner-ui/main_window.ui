@@ -29,7 +29,7 @@
        </attribute>
        <layout class="QVBoxLayout" name="verticalLayout">
         <item>
-         <widget class="QTableView" name="view_keys">
+         <widget class="MetadataTableView" name="view_keys">
           <property name="alternatingRowColors">
            <bool>true</bool>
           </property>
@@ -67,7 +67,7 @@
        </attribute>
        <layout class="QVBoxLayout" name="verticalLayout_2">
         <item>
-         <widget class="QTreeView" name="view_head">
+         <widget class="MetadataTreeView" name="view_head">
           <property name="uniformRowHeights">
            <bool>true</bool>
           </property>
@@ -228,6 +228,16 @@
    <extends>QGroupBox</extends>
    <header>git_annex_metadata_gui.metadata_edit</header>
   </customwidget>
+  <customwidget>
+   <class>MetadataTableView</class>
+   <extends>QTableView</extends>
+   <header>git_annex_metadata_gui.metadata_table_view</header>
+  </customwidget>
+  <customwidget>
+   <class>MetadataTreeView</class>
+   <extends>QTreeView</extends>
+   <header>git_annex_metadata_gui.metadata_tree_view</header>
+  </customwidget>
  </customwidgets>
  <resources/>
  <connections>
@@ -340,6 +350,70 @@
     <hint type="destinationlabel">
      <x>-1</x>
      <y>-1</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>view_head</sender>
+   <signal>item_selected(QStandardItem)</signal>
+   <receiver>stack_preview</receiver>
+   <slot>preview_item(QStandardItem)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>259</x>
+     <y>315</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>662</x>
+     <y>190</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>view_keys</sender>
+   <signal>item_selected(QStandardItem)</signal>
+   <receiver>stack_preview</receiver>
+   <slot>preview_item(QStandardItem)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>259</x>
+     <y>315</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>662</x>
+     <y>190</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>view_head</sender>
+   <signal>item_selected(QStandardItem)</signal>
+   <receiver>metadata_edit</receiver>
+   <slot>set_item(QStandardItem)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>259</x>
+     <y>315</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>662</x>
+     <y>470</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>view_keys</sender>
+   <signal>item_selected(QStandardItem)</signal>
+   <receiver>metadata_edit</receiver>
+   <slot>set_item(QStandardItem)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>259</x>
+     <y>315</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>662</x>
+     <y>470</y>
     </hint>
    </hints>
   </connection>

@@ -38,24 +38,13 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
 
         self.repo = None
         self.model_keys = AnnexedKeyMetadataModel(self)
-        proxy_keys = QtCore.QSortFilterProxyModel(self.view_keys)
-        proxy_keys.setSourceModel(self.model_keys)
-        self.view_keys.setModel(proxy_keys)
+        self.view_keys.setModel(self.model_keys)
 
         self.model_head = AnnexedFileMetadataModel(self.view_head)
         self.model_head.setSourceModel(self.model_keys)
-        proxy_head = QtCore.QSortFilterProxyModel(self.view_head)
-        proxy_head.setSourceModel(self.model_head)
-        self.view_head.setModel(proxy_head)
+        self.view_head.setModel(self.model_head)
 
         self.model_keys.headerDataChanged.connect(self.refresh_headers)
-
-        self.view_keys.selectionModel().selectionChanged.connect(
-           self._on_selection_changed
-        )
-        self.view_head.selectionModel().selectionChanged.connect(
-            self._on_selection_changed
-        )
 
     def setupUi(self, window=None):
         if window is None:
@@ -88,49 +77,32 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
 
         header = self.view_keys.horizontalHeader()
 
-        for idx, h in enumerate(headers):
-            hidden = header.isSectionHidden(idx + 1)
+        def on_triggered(h):
+            def set_visibility(visible):
+                self.view_keys.show_header(h, visible)
+                self.view_head.show_header(h, visible)
+            return set_visibility
+
+        def on_visibility_set(action, h):
+            def set_checked(h_, visible):
+                if h == h_:
+                    action.setChecked(visible)
+            return set_checked
+
+        for idx, h in enumerate(headers, 1):
+            hidden = header.isSectionHidden(idx)
 
             action = QtWidgets.QAction(self)
             action.setText(h)
             action.setCheckable(True)
             action.setChecked(not hidden)
-            action.triggered.connect(
-                functools.partial(self.set_header_visible, h),
-            )
+            action.triggered.connect(on_triggered(h))
+
+            signal = self.view_keys.header_visibility_changed
+            signal.connect(on_visibility_set(action, h))
 
             self.menu_headers.addAction(action)
 
         empty = not headers
         self.menu_headers.setDisabled(empty)
-
-    @QtCore.pyqtSlot(str)
-    def set_header_visible(self, header_title, visible=True):
-        idx = self.model_keys.fields.index(header_title)
-        header_keys = self.view_keys.horizontalHeader()
-        header_keys.setSectionHidden(idx, not visible)
-        header_head = self.view_head.header()
-        header_head.setSectionHidden(idx, not visible)
-
-    @QtCore.pyqtSlot(str)
-    def set_header_hidden(self, header_title):
-        self.set_header_visible(header_title, visible=False)
-
-    @QtCore.pyqtSlot(str)
-    def add_new_column(self, header_title):
-        self.model_keys.insert_field(header_title)
-
-    def _on_selection_changed(self, selected, deselected):
-        self.stack_preview.clear()
-
-        indexes = selected.indexes()
-        if not indexes:
-            return
-
-        index = indexes[0]
-        src_index = index.model().mapToSource(index)
-        item = src_index.model().itemFromIndex(src_index)
-
-        self.stack_preview.preview_item(item)
-        self.metadata_edit.set_item(item)
 
