@@ -40,7 +40,10 @@ class MetadataEditPlugin(QtDesigner.QPyDesignerCustomWidgetPlugin):
         model = MockMetadataModel()
         self._models.append(model)
         key_item = model.item(0, 0)
-        return MetadataEdit(parent=parent, item=key_item)
+        widget = MetadataEdit(parent)
+        widget.isVisible = lambda : True
+        widget.set_item(key_item)
+        return widget
 
     def name(self):
         return "MetadataEdit"

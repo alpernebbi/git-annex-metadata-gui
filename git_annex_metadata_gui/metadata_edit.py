@@ -14,7 +14,10 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
+import sip
+
 from PyQt5 import Qt
+from PyQt5 import QtGui
 from PyQt5 import QtCore
 from PyQt5 import QtWidgets
 
@@ -28,38 +31,67 @@ except ImportError:
 class MetadataEdit(QtWidgets.QGroupBox):
     new_field_requested = QtCore.pyqtSignal(str)
 
-    def __init__(self, parent=None, item=None):
+    def __init__(self, parent=None):
         super().__init__(parent)
-        self._item = item
+        self._item = None
         self._fields = []
+        self._new_field_edit = None
+        self.clear()
 
-        layout = QtWidgets.QFormLayout(self)
-        growth_policy = QtWidgets.QFormLayout.FieldsStayAtSizeHint
-        layout.setFieldGrowthPolicy(growth_policy)
-        self.setLayout(layout)
+    @QtCore.pyqtSlot(QtGui.QStandardItem)
+    def set_item(self, item):
+        self.clear()
 
-        if item is None:
+        if not self.isVisible():
             return
 
-        self.setTitle(item.key)
+        if not hasattr(item, 'key'):
+            return
+        self._item = item
+
+        if hasattr(item, 'name'):
+            self.setTitle(item.name)
+        else:
+            self.setTitle(item.key)
 
         model = self._item.model()
-        model.columnsInserted.connect(self.update_fields)
-        model.modelReset.connect(self.invalidate)
+        model.columnsInserted.connect(self._on_columns_inserted)
+        model.modelReset.connect(self.clear)
         self.new_field_requested.connect(model.insert_field)
 
-        line_edit = AutoSizeLineEdit()
-        line_edit.editingFinished.connect(self._on_editing_finished)
-        self.layout().addRow(line_edit, QtWidgets.QWidget())
-        self._new_field_edit = line_edit
+        if self._new_field_edit is None:
+            line_edit = AutoSizeLineEdit()
+            line_edit.editingFinished.connect(self._request_new_field)
+            self.layout().addRow(line_edit, QtWidgets.QWidget())
+            self._new_field_edit = line_edit
 
         self.update_fields()
 
-    def invalidate(self):
-        self._item = None
+    @QtCore.pyqtSlot()
+    def clear(self):
+        try:
+            model = self._item.model()
+        except (AttributeError, RuntimeError):
+            pass
+        else:
+            model.columnsInserted.disconnect(self._on_columns_inserted)
+            self.new_field_requested.disconnect(model.insert_field)
 
-    def field_count(self):
-        return self.layout().rowCount() - 1
+        self._item = None
+        self._fields = []
+        self._new_field_edit = None
+        self.setTitle('')
+
+        if self.layout() is not None:
+            while self.layout().count():
+                item = self.layout().takeAt(0)
+                if item:
+                    item.widget().deleteLater()
+            sip.delete(self.layout())
+
+        layout = QtWidgets.QFormLayout()
+        layout.setFieldGrowthPolicy(layout.FieldsStayAtSizeHint)
+        self.setLayout(layout)
 
     def update_fields(self):
         if self._item is None:
@@ -77,7 +109,7 @@ class MetadataEdit(QtWidgets.QGroupBox):
             self._fields.append(field)
             field_item = parent.child(row, col)
             self.layout().insertRow(
-                self.field_count(),
+                self.layout().rowCount() - 1,
                 "{}: ".format(field),
                 FieldItemEdit(field_item, parent=self),
             )
@@ -87,9 +119,21 @@ class MetadataEdit(QtWidgets.QGroupBox):
             title = "{:.45}...".format(title)
         super().setTitle(title)
 
-    def _on_editing_finished(self):
+    def _request_new_field(self):
         field = self._new_field_edit.text()
         if field:
             self._new_field_edit.clear()
             self.new_field_requested.emit(field)
+
+    def _on_columns_inserted(self, parent, first, last):
+        if self._item is None:
+            return
+
+        parent_ = self._item.parent()
+        if not parent_:
+            parent_ = self._item.model().invisibleRootItem()
+        parent_ = parent_.index()
+
+        if parent == parent_:
+            self.update_fields()
 

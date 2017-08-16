@@ -17,7 +17,6 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 import functools
-import mimetypes
 
 from PyQt5 import Qt
 from PyQt5 import QtCore
@@ -87,7 +86,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         if self.repo:
             self.model_keys.setRepo(self.repo)
             self.stack_preview.clear()
-            self._clear_metadata_edit()
+            self.metadata_edit.clear()
 
     @QtCore.pyqtSlot()
     def refresh_headers(self):
@@ -140,25 +139,5 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         item = src_index.model().itemFromIndex(src_index)
 
         self.stack_preview.preview_item(item)
-        if self.dock_metadata.isVisible():
-            self._metadata_edit_item(item)
+        self.metadata_edit.set_item(item)
 
-    def _clear_metadata_edit(self):
-        self._metadata_edit_item(None)
-
-    def _metadata_edit_item(self, item):
-        if item is not None and not hasattr(item, 'key'):
-            item = None
-
-        new_edit = MetadataEdit(
-            parent=self.dock_metadata_contents,
-            item=item,
-        )
-
-        layout = self.dock_metadata_contents.layout()
-        old = layout.replaceWidget(self.metadata_edit, new_edit)
-        old.widget().deleteLater()
-        self.metadata_edit = new_edit
-
-        if hasattr(item, 'name'):
-            self.metadata_edit.setTitle(item.name)
