@@ -133,33 +133,21 @@
    <widget class="QWidget" name="dock_preview_contents">
     <layout class="QGridLayout" name="gridLayout">
      <item row="0" column="0">
-      <widget class="QStackedWidget" name="stack_preview">
-       <widget class="QWidget" name="page_text_preview">
-        <layout class="QGridLayout" name="gridLayout_2">
-         <item row="0" column="0">
-          <widget class="QPlainTextEdit" name="text_preview">
-           <property name="font">
-            <font>
-             <family>Monospace</family>
-            </font>
-           </property>
-           <property name="lineWrapMode">
-            <enum>QPlainTextEdit::NoWrap</enum>
-           </property>
-           <property name="readOnly">
-            <bool>true</bool>
-           </property>
-          </widget>
-         </item>
-        </layout>
+      <widget class="FilePreview" name="stack_preview">
+       <widget class="QPlainTextEdit" name="text_preview">
+        <property name="font">
+         <font>
+          <family>Monospace</family>
+         </font>
+        </property>
+        <property name="lineWrapMode">
+         <enum>QPlainTextEdit::NoWrap</enum>
+        </property>
+        <property name="readOnly">
+         <bool>true</bool>
+        </property>
        </widget>
-       <widget class="QWidget" name="page_graphics_preview">
-        <layout class="QGridLayout" name="gridLayout_3">
-         <item row="0" column="0">
-          <widget class="QGraphicsView" name="graphics_preview"/>
-         </item>
-        </layout>
-       </widget>
+       <widget class="QGraphicsView" name="graphics_preview"/>
       </widget>
      </item>
     </layout>
@@ -206,6 +194,11 @@
   </action>
  </widget>
  <customwidgets>
+  <customwidget>
+   <class>FilePreview</class>
+   <extends>QStackedWidget</extends>
+   <header>git_annex_metadata_gui.file_preview</header>
+  </customwidget>
   <customwidget>
    <class>MetadataEdit</class>
    <extends>QGroupBox</extends>
