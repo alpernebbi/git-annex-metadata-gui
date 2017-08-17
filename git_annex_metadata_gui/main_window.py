@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
+import bisect
 import functools
 
 from PyQt5 import Qt
@@ -35,6 +36,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.setupUi()
+        self._header_actions = []
 
         self.repo = None
         self.model_keys = AnnexedKeyMetadataModel(self)
@@ -43,8 +45,6 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self.model_head = AnnexedFileMetadataModel(self.view_head)
         self.model_head.setSourceModel(self.model_keys)
         self.view_head.setModel(self.model_head)
-
-        self.model_keys.headerDataChanged.connect(self.refresh_headers)
 
     def setupUi(self, window=None):
         if window is None:
@@ -71,38 +71,49 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
             self.metadata_edit.clear()
 
     @QtCore.pyqtSlot()
-    def refresh_headers(self):
-        headers = self.model_keys.fields[1:]
+    def clear_header_menu(self):
         self.menu_headers.clear()
+        self.menu_headers.setDisabled(True)
+        self._header_actions = []
 
-        header = self.view_keys.horizontalHeader()
+    @QtCore.pyqtSlot(str)
+    def create_header_menu_action(self, header):
+        if self._header_actions:
+            headers, actions = zip(*self._header_actions)
+            if header in headers:
+                return
+            idx = bisect.bisect(headers, header)
+        else:
+            headers = []
+            actions = []
+            idx = 0
 
-        def on_triggered(h):
-            def set_visibility(visible):
-                self.view_keys.show_header(h, visible)
-                self.view_head.show_header(h, visible)
-            return set_visibility
+        action = QtWidgets.QAction(self)
+        action.setText(header)
+        action.setCheckable(True)
+        action.setChecked(True)
 
-        def on_visibility_set(action, h):
-            def set_checked(h_, visible):
-                if h == h_:
-                    action.setChecked(visible)
-            return set_checked
+        def set_visibility(visible):
+            self.view_keys.show_header(header, visible)
+            self.view_head.show_header(header, visible)
 
-        for idx, h in enumerate(headers, 1):
-            hidden = header.isSectionHidden(idx)
+        action.triggered.connect(set_visibility)
 
-            action = QtWidgets.QAction(self)
-            action.setText(h)
-            action.setCheckable(True)
-            action.setChecked(not hidden)
-            action.triggered.connect(on_triggered(h))
+        def visibility_set(header_, visible):
+            if header_ == header:
+                action.setChecked(visible)
 
-            signal = self.view_keys.header_visibility_changed
-            signal.connect(on_visibility_set(action, h))
+        for view in (self.view_keys, self.view_head):
+            view.header_visibility_changed.connect(visibility_set)
 
+        if idx < len(actions):
+            before_action = actions[idx]
+            self.menu_headers.insertAction(before_action, action)
+        else:
             self.menu_headers.addAction(action)
 
-        empty = not headers
+        self._header_actions.insert(idx, (header, action))
+
+        empty = len(self._header_actions) == 0
         self.menu_headers.setDisabled(empty)
 

@@ -21,6 +21,8 @@ from PyQt5 import QtWidgets
 class MetadataTreeView(QtWidgets.QTreeView):
     item_selected = QtCore.pyqtSignal(QtGui.QStandardItem)
     header_visibility_changed = QtCore.pyqtSignal(str, bool)
+    header_created = QtCore.pyqtSignal(str)
+    model_reset = QtCore.pyqtSignal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -33,6 +35,12 @@ class MetadataTreeView(QtWidgets.QTreeView):
 
         signal = self.selectionModel().selectionChanged
         signal.connect(self._on_selection_changed)
+
+        signal = self._bare_model.headerDataChanged
+        signal.connect(self._on_header_data_changed)
+
+        signal = self._bare_model.modelReset
+        signal.connect(self._on_model_reset)
 
     @QtCore.pyqtSlot(str)
     @QtCore.pyqtSlot(str, bool)
@@ -63,3 +71,16 @@ class MetadataTreeView(QtWidgets.QTreeView):
         item = src_index.model().itemFromIndex(src_index)
 
         self.item_selected.emit(item)
+
+    def _on_header_data_changed(self, orientation, first, last):
+        fields = self._bare_model.fields[1:]
+
+        for field in fields:
+            if field not in self._fields:
+                self.header_created.emit(field)
+
+        self._fields = fields
+
+    def _on_model_reset(self):
+        self._fields = []
+        self.model_reset.emit()

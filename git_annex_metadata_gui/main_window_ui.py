@@ -137,6 +137,10 @@ class Ui_MainWindow(object):
         self.view_keys.item_selected['QStandardItem'].connect(self.stack_preview.preview_item)
         self.view_head.item_selected['QStandardItem'].connect(self.metadata_edit.set_item)
         self.view_keys.item_selected['QStandardItem'].connect(self.metadata_edit.set_item)
+        self.view_keys.header_created['QString'].connect(MainWindow.create_header_menu_action)
+        self.view_head.header_created['QString'].connect(MainWindow.create_header_menu_action)
+        self.view_head.model_reset.connect(MainWindow.clear_header_menu)
+        self.view_keys.model_reset.connect(MainWindow.clear_header_menu)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
 
     def retranslateUi(self, MainWindow):

@@ -360,8 +360,8 @@
    <slot>preview_item(QStandardItem)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>259</x>
-     <y>315</y>
+     <x>101</x>
+     <y>85</y>
     </hint>
     <hint type="destinationlabel">
      <x>662</x>
@@ -392,8 +392,8 @@
    <slot>set_item(QStandardItem)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>259</x>
-     <y>315</y>
+     <x>101</x>
+     <y>85</y>
     </hint>
     <hint type="destinationlabel">
      <x>662</x>
@@ -417,13 +417,75 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>view_keys</sender>
+   <signal>header_created(QString)</signal>
+   <receiver>MainWindow</receiver>
+   <slot>create_header_menu_action(QString)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>259</x>
+     <y>315</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>399</x>
+     <y>299</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>view_head</sender>
+   <signal>header_created(QString)</signal>
+   <receiver>MainWindow</receiver>
+   <slot>create_header_menu_action(QString)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>259</x>
+     <y>315</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>399</x>
+     <y>299</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>view_head</sender>
+   <signal>model_reset()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>clear_header_menu()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>259</x>
+     <y>315</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>399</x>
+     <y>299</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>view_keys</sender>
+   <signal>model_reset()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>clear_header_menu()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>259</x>
+     <y>315</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>399</x>
+     <y>299</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <slots>
   <slot>open_repo()</slot>
   <slot>refresh_repo()</slot>
-  <slot>refresh_headers()</slot>
-  <slot>set_header_visible(QString)</slot>
-  <slot>set_header_hidden(QString)</slot>
-  <slot>add_new_column(QString)</slot>
+  <slot>clear_header_menu()</slot>
+  <slot>create_header_menu_action(QString)</slot>
  </slots>
 </ui>
