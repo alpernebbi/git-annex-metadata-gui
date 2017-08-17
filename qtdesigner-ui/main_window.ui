@@ -27,8 +27,40 @@
        <attribute name="title">
         <string>All Keys</string>
        </attribute>
-       <layout class="QVBoxLayout" name="verticalLayout">
-        <item>
+       <layout class="QGridLayout" name="gridLayout_2">
+        <item row="1" column="0">
+         <widget class="QLabel" name="label_filter_keys">
+          <property name="text">
+           <string>Filter Keys:</string>
+          </property>
+          <property name="buddy">
+           <cstring>edit_filter_keys</cstring>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="1">
+         <widget class="QLineEdit" name="edit_filter_keys"/>
+        </item>
+        <item row="1" column="2">
+         <widget class="QComboBox" name="combo_filter_keys">
+          <item>
+           <property name="text">
+            <string>Fixed</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>Regex</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>Wildcard</string>
+           </property>
+          </item>
+         </widget>
+        </item>
+        <item row="0" column="0" colspan="3">
          <widget class="MetadataTableView" name="view_keys">
           <property name="alternatingRowColors">
            <bool>true</bool>
@@ -361,11 +393,11 @@
    <hints>
     <hint type="sourcelabel">
      <x>101</x>
-     <y>85</y>
+     <y>76</y>
     </hint>
     <hint type="destinationlabel">
      <x>662</x>
-     <y>190</y>
+     <y>76</y>
     </hint>
    </hints>
   </connection>
@@ -393,7 +425,7 @@
    <hints>
     <hint type="sourcelabel">
      <x>101</x>
-     <y>85</y>
+     <y>76</y>
     </hint>
     <hint type="destinationlabel">
      <x>662</x>
@@ -440,8 +472,8 @@
    <slot>create_header_menu_action(QString)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>259</x>
-     <y>315</y>
+     <x>101</x>
+     <y>76</y>
     </hint>
     <hint type="destinationlabel">
      <x>399</x>
@@ -472,12 +504,44 @@
    <slot>clear_header_menu()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>259</x>
-     <y>315</y>
+     <x>101</x>
+     <y>76</y>
     </hint>
     <hint type="destinationlabel">
      <x>399</x>
      <y>299</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>edit_filter_keys</sender>
+   <signal>textEdited(QString)</signal>
+   <receiver>view_keys</receiver>
+   <slot>set_filter_pattern(QString)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>253</x>
+     <y>541</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>259</x>
+     <y>297</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>combo_filter_keys</sender>
+   <signal>activated(QString)</signal>
+   <receiver>view_keys</receiver>
+   <slot>set_filter_type(QString)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>449</x>
+     <y>529</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>449</x>
+     <y>482</y>
     </hint>
    </hints>
   </connection>

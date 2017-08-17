@@ -27,6 +27,7 @@ class MetadataTableView(QtWidgets.QTableView):
     def __init__(self, parent=None):
         super().__init__(parent)
         self._fields = []
+        self._filter = ('', 'Fixed')
 
     def setModel(self, model):
         self._bare_model = model
@@ -61,6 +62,29 @@ class MetadataTableView(QtWidgets.QTableView):
     @QtCore.pyqtSlot(str)
     def create_header(self, title):
         self._bare_model.insert_field(title)
+
+    @QtCore.pyqtSlot(str)
+    def set_filter_pattern(self, filter_pattern):
+        self._filter = (filter_pattern, self._filter[1])
+        self.filter()
+
+    @QtCore.pyqtSlot(str)
+    def set_filter_type(self, filter_type):
+        self._filter = (self._filter[0], filter_type)
+        self.filter()
+
+    def filter(self):
+        pattern, type_ = self._filter
+
+        if not self.model():
+            return
+
+        if type_ == 'Fixed':
+            self.model().setFilterFixedString(pattern)
+        elif type_ == 'Regex':
+            self.model().setFilterRegExp(pattern)
+        elif type_ == 'Wildcard':
+            self.model().setFilterWildcard(pattern)
 
     def _on_selection_changed(self, selected, deselected):
         indexes = selected.indexes()
