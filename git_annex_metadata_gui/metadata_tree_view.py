@@ -26,6 +26,7 @@ class MetadataTreeView(QtWidgets.QTreeView):
 
     def __init__(self, parent=None):
         super().__init__(parent)
+        self._treeish = 'HEAD'
 
     def setModel(self, model):
         self._bare_model = model
@@ -60,6 +61,16 @@ class MetadataTreeView(QtWidgets.QTreeView):
     @QtCore.pyqtSlot(str)
     def create_header(self, title):
         self._bare_model.insert_field(title)
+
+    @QtCore.pyqtSlot(str)
+    def set_treeish_to_build(self, treeish):
+        self._treeish = treeish
+
+    @QtCore.pyqtSlot()
+    def rebuild_treeish(self):
+        if not self.model():
+            return
+        self._bare_model.setTreeish(self._treeish)
 
     def _on_selection_changed(self, selected, deselected):
         indexes = selected.indexes()
