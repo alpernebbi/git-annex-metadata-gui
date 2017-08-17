@@ -539,9 +539,12 @@ class AnnexedFileMetadataModel(QtGui.QStandardItemModel):
         tree = self._model.repo.annex.get_file_tree(self._treeish)
         self._pending_trees = [(tree, '', None)]
         self.clear()
-        self.setHorizontalHeaderLabels(['Filename'])
 
         self.endResetModel()
+
+        headers = ['Filename', *self._model.fields[1:]]
+        self.setHorizontalHeaderLabels(headers)
+
         self._build_tree()
 
     @QtCore.pyqtSlot()
