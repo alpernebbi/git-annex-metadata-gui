@@ -36,7 +36,6 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.setupUi()
-        self._header_actions = []
 
         self.repo = None
         self.model_keys = AnnexedKeyMetadataModel(self)
@@ -74,19 +73,15 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
     def clear_header_menu(self):
         self.menu_headers.clear()
         self.menu_headers.setDisabled(True)
-        self._header_actions = []
 
     @QtCore.pyqtSlot(str)
     def create_header_menu_action(self, header):
-        if self._header_actions:
-            headers, actions = zip(*self._header_actions)
-            if header in headers:
-                return
-            idx = bisect.bisect(headers, header)
-        else:
-            headers = []
-            actions = []
-            idx = 0
+        actions = self.menu_headers.actions()
+        headers = [act.text() for act in actions]
+
+        if header in headers:
+            return
+        idx = bisect.bisect(headers, header)
 
         action = QtWidgets.QAction(self)
         action.setText(header)
@@ -112,8 +107,6 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         else:
             self.menu_headers.addAction(action)
 
-        self._header_actions.insert(idx, (header, action))
-
-        empty = len(self._header_actions) == 0
+        empty = len(self.menu_headers.actions()) == 0
         self.menu_headers.setDisabled(empty)
 
