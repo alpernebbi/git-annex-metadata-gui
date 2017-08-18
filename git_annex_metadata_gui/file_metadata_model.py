@@ -233,9 +233,7 @@ class AnnexedFileMetadataModel(QtGui.QStandardItemModel):
         self._treeish = None
 
     def setSourceModel(self, model):
-        self.beginResetModel()
         self._model = model
-        self.endResetModel()
 
         model.columnsInserted.connect(self._on_columns_inserted)
         model.headerDataChanged.connect(self._on_header_data_changed)
@@ -263,15 +261,11 @@ class AnnexedFileMetadataModel(QtGui.QStandardItemModel):
         if treeish is None:
             treeish = 'HEAD'
 
-        self.beginResetModel()
-
         self._treeish = treeish
         tree = self._model.repo.annex.get_file_tree(self._treeish)
         self._pending_trees = [(tree, '', None)]
         self._pending_files = collections.defaultdict(list)
         self.clear()
-
-        self.endResetModel()
 
         headers = ['Filename', *self._model.fields[1:]]
         self.setHorizontalHeaderLabels(headers)

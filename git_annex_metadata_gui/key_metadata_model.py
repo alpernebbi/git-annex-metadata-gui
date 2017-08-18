@@ -162,18 +162,14 @@ class AnnexedKeyMetadataModel(QtGui.QStandardItemModel):
         self.repo = None
 
     def setRepo(self, repo):
-        self.beginResetModel()
-
         self.repo = repo
         self.fields = ['Git-Annex Key']
         self.key_items = {}
         self._pending = iter(self.repo.annex.values())
+
         self.clear()
         self.setHorizontalHeaderLabels(self.fields)
-
-        self.endResetModel()
         self._populate()
-
 
     @QtCore.pyqtSlot()
     @automatically_consumed
