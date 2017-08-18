@@ -155,6 +155,8 @@ class AnnexedFieldItem(QtGui.QStandardItem):
 
 
 class AnnexedKeyMetadataModel(QtGui.QStandardItemModel):
+    key_inserted = QtCore.pyqtSignal(str)
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self.repo = None
@@ -196,6 +198,8 @@ class AnnexedKeyMetadataModel(QtGui.QStandardItemModel):
                 Qt.Qt.QueuedConnection,
                 QtCore.Q_ARG(str, field)
             )
+
+        self.key_inserted.emit(key_obj.key)
 
     @QtCore.pyqtSlot(str)
     def insert_field(self, field):

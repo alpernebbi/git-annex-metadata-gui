@@ -241,6 +241,8 @@ class AnnexedFileMetadataModel(QtGui.QStandardItemModel):
         model.headerDataChanged.connect(self._on_header_data_changed)
         model.modelReset.connect(self.setTreeish)
 
+        model.key_inserted.connect(self._on_key_inserted)
+
         if self._model.repo:
             self.setTreeish()
 
@@ -264,9 +266,9 @@ class AnnexedFileMetadataModel(QtGui.QStandardItemModel):
         self.beginResetModel()
 
         self._treeish = treeish
-        self._pending = []
         tree = self._model.repo.annex.get_file_tree(self._treeish)
         self._pending_trees = [(tree, '', None)]
+        self._pending_files = collections.defaultdict(list)
         self.clear()
 
         self.endResetModel()
@@ -311,21 +313,17 @@ class AnnexedFileMetadataModel(QtGui.QStandardItemModel):
                     pass
 
                 elif isinstance(obj, AnnexedFile):
-                    f = PendingFile(obj.key, name_, item)
-                    self._pending.append(f)
+                    key_item = self._model.key_items.get(obj.key, None)
+                    if key_item:
+                        self.insert_file(key_item, name_, item)
+                    else:
+                        f = PendingFile(obj.key, name_, item)
+                        self._pending_files[obj.key].append(f)
 
                 elif isinstance(obj, AnnexedFileTree):
                     t = PendingTree(obj, name_, item)
                     self._pending_trees.append(t)
 
-            yield
-
-        while self._pending:
-            file = random.choice(self._pending)
-            if file.key in self._model.key_items:
-                obj = self._model.key_items[file.key]
-                self.insert_file(obj, file.name, file.parent)
-                self._pending.remove(file)
             yield
 
     def insert_file(self, obj, name, parent=None):
@@ -338,6 +336,12 @@ class AnnexedFileMetadataModel(QtGui.QStandardItemModel):
             for c in range(1, self._model.columnCount())
         )
         parent.appendRow([file_item, *field_items])
+
+    def _on_key_inserted(self, key):
+        for (_, name, parent) in self._pending_files[key]:
+            key_item = self._model.key_items[key]
+            self.insert_file(key_item, name, parent)
+        self._pending_files[key].clear()
 
     def _on_columns_inserted(self, parent, first, last):
         columns = range(first, last + 1)
