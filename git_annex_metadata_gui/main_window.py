@@ -26,8 +26,8 @@ from PyQt5 import QtWidgets
 
 from git_annex_adapter.repo import GitAnnexRepo
 
-from .models import AnnexedKeyMetadataModel
-from .models import AnnexedFileMetadataModel
+from .key_metadata_model import AnnexedKeyMetadataModel
+from .file_metadata_model import AnnexedFileMetadataModel
 from .main_window_ui import Ui_MainWindow
 from .metadata_edit import MetadataEdit
 
