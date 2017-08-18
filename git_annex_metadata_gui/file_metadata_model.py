@@ -231,6 +231,7 @@ class AnnexedFileMetadataModel(QtGui.QStandardItemModel):
     def __init__(self, parent=None):
         super().__init__(parent)
         self._treeish = None
+        self._pending_files = collections.defaultdict(list)
 
     def setSourceModel(self, model):
         self._model = model
@@ -238,7 +239,6 @@ class AnnexedFileMetadataModel(QtGui.QStandardItemModel):
         model.columnsInserted.connect(self._on_columns_inserted)
         model.headerDataChanged.connect(self._on_header_data_changed)
         model.modelReset.connect(self.setTreeish)
-
         model.key_inserted.connect(self._on_key_inserted)
 
         if self._model.repo:
@@ -262,8 +262,6 @@ class AnnexedFileMetadataModel(QtGui.QStandardItemModel):
             treeish = 'HEAD'
 
         self._treeish = treeish
-        tree = self._model.repo.annex.get_file_tree(self._treeish)
-        self._pending_trees = [(tree, '', None)]
         self._pending_files = collections.defaultdict(list)
         self.clear()
 
@@ -275,20 +273,27 @@ class AnnexedFileMetadataModel(QtGui.QStandardItemModel):
     @QtCore.pyqtSlot()
     @automatically_consumed
     def _build_tree(self):
-        PendingFile = collections.namedtuple(
-            'PendingFile',
-            ['key', 'name', 'parent'],
+        PendingObject = collections.namedtuple(
+            'PendingObject',
+            ['object', 'name', 'parent'],
         )
 
-        PendingTree = collections.namedtuple(
-            'PendingTree',
-            ['tree', 'name', 'parent'],
-        )
+        pending = collections.deque()
 
-        while self._pending_trees:
-            tree, name, parent = self._pending_trees.pop()
+        root = self._model.repo.annex.get_file_tree(self._treeish)
+        root_item = self.invisibleRootItem()
+        for name_, obj_ in root.items():
+            p = PendingObject(obj_, name_, root_item)
+            pending.append(p)
+            yield
 
-            if parent:
+        while pending:
+            obj, name, parent = pending.pop()
+
+            if isinstance(obj, pygit2.Blob):
+                pass
+
+            elif isinstance(obj, AnnexedFileTree):
                 item = AnnexedDirectoryItem(name)
                 field_items = [
                     AnnexedDirectoryFieldItem(item)
@@ -297,39 +302,42 @@ class AnnexedFileMetadataModel(QtGui.QStandardItemModel):
                 parent.appendRow([item, *field_items])
 
                 for field_item in field_items:
-                    field_item._connect()
+                    p = PendingObject(field_item, name, parent)
+                    pending.append(p)
 
-            else:
-                item = self.invisibleRootItem()
+                for name_, obj_ in obj.items():
+                    p = PendingObject(obj_, name_, item)
+                    pending.append(p)
 
-            for name_, obj in tree.items():
-                if isinstance(obj, pygit2.Blob):
-                    pass
+            elif isinstance(obj, AnnexedFile):
+                if obj.key in self._model.key_items:
+                    key_item = self._model.key_items[obj.key]
+                    self.insert_file(key_item, name, parent)
+                else:
+                    f = PendingObject(obj, name, parent)
+                    self._pending_files[obj.key].append(f)
 
-                elif isinstance(obj, AnnexedFile):
-                    key_item = self._model.key_items.get(obj.key, None)
-                    if key_item:
-                        self.insert_file(key_item, name_, item)
-                    else:
-                        f = PendingFile(obj.key, name_, item)
-                        self._pending_files[obj.key].append(f)
-
-                elif isinstance(obj, AnnexedFileTree):
-                    t = PendingTree(obj, name_, item)
-                    self._pending_trees.append(t)
+            elif isinstance(obj, AnnexedDirectoryFieldItem):
+                obj._connect()
 
             yield
 
-    def insert_file(self, obj, name, parent=None):
+    def insert_file(self, key_item, name, parent=None):
         if parent is None:
             parent = self.invisibleRootItem()
 
-        file_item = AnnexedFileItem(obj, name)
-        field_items = (
-            AnnexedFileFieldItem(self._model.item(obj.row(), c), name)
+        file_item = AnnexedFileItem(key_item, name)
+
+        def file_field_item(col):
+            field_item = self._model.item(key_item.row(), col)
+            return AnnexedFileFieldItem(field_item, name)
+
+        file_field_items = (
+            file_field_item(c)
             for c in range(1, self._model.columnCount())
         )
-        parent.appendRow([file_item, *field_items])
+
+        parent.appendRow([file_item, *file_field_items])
 
     def _on_key_inserted(self, key):
         for (_, name, parent) in self._pending_files[key]:
