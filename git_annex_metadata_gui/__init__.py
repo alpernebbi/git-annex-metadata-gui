@@ -44,6 +44,11 @@ def main():
     logger.addHandler(statusbar_handler)
     logger.setLevel(logging.INFO)
 
+    def excepthook(exc_type, value, traceback):
+        exc_info = (exc_type, value, traceback)
+        logger.critical('%s', value, exc_info=exc_info)
+    sys.excepthook = excepthook
+
     main_window.show()
     return app.exec_()
 
