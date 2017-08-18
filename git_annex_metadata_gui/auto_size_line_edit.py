@@ -14,8 +14,12 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
+import logging
+
 from PyQt5 import QtCore
 from PyQt5 import QtWidgets
+
+logger = logging.getLogger(__name__)
 
 class AutoSizeLineEdit(QtWidgets.QLineEdit):
     def __init__(self, parent=None):

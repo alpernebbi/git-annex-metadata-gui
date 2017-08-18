@@ -18,6 +18,7 @@
 
 import bisect
 import functools
+import logging
 
 from PyQt5 import Qt
 from PyQt5 import QtCore
@@ -30,6 +31,8 @@ from .key_metadata_model import AnnexedKeyMetadataModel
 from .file_metadata_model import AnnexedFileMetadataModel
 from .main_window_ui import Ui_MainWindow
 from .metadata_edit import MetadataEdit
+
+logger = logging.getLogger(__name__)
 
 
 class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):

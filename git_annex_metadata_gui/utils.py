@@ -18,11 +18,15 @@
 
 import ast
 import functools
+import logging
 import time
 
 from PyQt5 import Qt
 from PyQt5 import QtGui
 from PyQt5 import QtCore
+
+logger = logging.getLogger(__name__)
+
 
 def parse_as_set(x):
     if x == '{}':
@@ -98,4 +102,15 @@ class DataProxyItem(QtGui.QStandardItem):
             cls=self.__class__.__name__,
             args=self._item,
         )
+
+
+class StatusBarLogHandler(logging.Handler):
+    def __init__(self, statusbar):
+        super().__init__()
+        self._statusbar = statusbar
+
+    def emit(self, record):
+        msg = self.format(record)
+        line = msg.split('\n')[0]
+        self._statusbar.showMessage(line, msecs=5000)
 

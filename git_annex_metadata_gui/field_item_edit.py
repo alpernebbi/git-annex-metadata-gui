@@ -14,6 +14,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
+import logging
+
 from PyQt5 import Qt
 from PyQt5 import QtCore
 from PyQt5 import QtWidgets
@@ -22,6 +24,9 @@ try:
     from .auto_size_line_edit import AutoSizeLineEdit
 except ImportError:
     from auto_size_line_edit import AutoSizeLineEdit
+
+logger = logging.getLogger(__name__)
+
 
 class FieldItemEdit(QtWidgets.QWidget):
     cleared = QtCore.pyqtSignal()

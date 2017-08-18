@@ -17,11 +17,13 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 import sys
+import logging
 
 from PyQt5 import QtCore
 from PyQt5 import QtGui
 from PyQt5 import QtWidgets
 
+from .utils import StatusBarLogHandler
 from .main_window import MainWindow
 
 app = None
@@ -29,10 +31,20 @@ app = None
 def main():
     global app
     app = QtWidgets.QApplication(sys.argv)
-
     main_window = MainWindow()
-    main_window.show()
 
+    stderr_handler = logging.StreamHandler(sys.stderr)
+    stderr_handler.setLevel(logging.WARNING)
+
+    statusbar_handler = StatusBarLogHandler(main_window.statusBar())
+    statusbar_handler.setLevel(logging.INFO)
+
+    logger = logging.getLogger()
+    logger.addHandler(stderr_handler)
+    logger.addHandler(statusbar_handler)
+    logger.setLevel(logging.INFO)
+
+    main_window.show()
     return app.exec_()
 
 if __name__ == "__main__":

@@ -15,6 +15,7 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 import bisect
+import logging
 
 from PyQt5 import Qt
 from PyQt5 import QtCore
@@ -23,6 +24,8 @@ from PyQt5 import QtWidgets
 
 from .utils import parse_as_set
 from .utils import automatically_consumed
+
+logger = logging.getLogger(__name__)
 
 
 class AnnexedKeyItem(QtGui.QStandardItem):

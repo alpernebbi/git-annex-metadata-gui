@@ -14,12 +14,16 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
+import logging
 import mimetypes
 
 from PyQt5 import Qt
 from PyQt5 import QtGui
 from PyQt5 import QtCore
 from PyQt5 import QtWidgets
+
+logger = logging.getLogger(__name__)
+
 
 class FilePreview(QtWidgets.QStackedWidget):
     def __init__(self, parent=None):

@@ -15,6 +15,7 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 import collections
+import logging
 import random
 import pygit2
 
@@ -28,6 +29,8 @@ from git_annex_adapter.repo import AnnexedFileTree
 
 from .utils import automatically_consumed
 from .utils import DataProxyItem
+
+logger = logging.getLogger(__name__)
 
 
 class AnnexedFileItem(DataProxyItem):
