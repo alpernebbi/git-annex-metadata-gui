@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
+import argparse
 import sys
 import logging
 
@@ -27,30 +28,74 @@ from .utils import StatusBarLogHandler
 from .main_window import MainWindow
 
 app = None
+my_args = None
+qt_args = None
+
+logger = logging.getLogger(__name__)
 
 def main():
-    global app
-    app = QtWidgets.QApplication(sys.argv)
-    main_window = MainWindow()
+    prog, *args = sys.argv
 
+    global my_args, qt_args
+    my_args, remaining = parse_args(args)
+    qt_args = [prog] + remaining
+
+    global app
+    app = QtWidgets.QApplication(qt_args)
+    main_window = MainWindow()
+    setup_logger(main_window, debug=my_args.debug)
+
+    main_window.show()
+    return app.exec_()
+
+
+def setup_logger(main_window, debug=False):
     stderr_handler = logging.StreamHandler(sys.stderr)
     stderr_handler.setLevel(logging.WARNING)
 
     statusbar_handler = StatusBarLogHandler(main_window.statusBar())
     statusbar_handler.setLevel(logging.INFO)
 
-    logger = logging.getLogger()
-    logger.addHandler(stderr_handler)
-    logger.addHandler(statusbar_handler)
-    logger.setLevel(logging.INFO)
+    root_logger = logging.getLogger()
+    root_logger.addHandler(stderr_handler)
+    root_logger.addHandler(statusbar_handler)
+    root_logger.setLevel(logging.INFO)
+
+    if debug:
+        stderr_handler.setLevel(logging.DEBUG)
+        root_logger.setLevel(logging.DEBUG)
+        logger.debug('Enabled debug messages')
 
     def excepthook(exc_type, value, traceback):
         exc_info = (exc_type, value, traceback)
         logger.critical('%s', value, exc_info=exc_info)
     sys.excepthook = excepthook
 
-    main_window.show()
-    return app.exec_()
+
+def parse_args(args):
+    parser = argparse.ArgumentParser(
+        description="A graphical interface for git-annex metadata.",
+        usage="%(prog)s [option ...]",
+        epilog="Also see the manual entry for qt5options(7)",
+        add_help=True,
+    )
+
+    parser.add_argument(
+        "--version", "-v",
+        action='version',
+        version="%(prog)s v0.2.0",
+        help="print version information and exit",
+    )
+
+    parser.add_argument(
+        "--debug",
+        action='store_true',
+        help="print debug-level log messages",
+    )
+
+    namespace, remaining = parser.parse_known_args()
+    return namespace, remaining
+
 
 if __name__ == "__main__":
     main()
