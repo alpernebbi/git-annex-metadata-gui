@@ -135,12 +135,18 @@ class AnnexedFieldItem(QtGui.QStandardItem):
             try:
                 self.metadata = parse_as_set(value)
             except:
+                fmt = "Cannot parse '{}' as a set object."
+                msg = fmt.format(value)
+                logger.error(msg)
                 return
 
         elif role == Qt.Qt.UserRole:
             try:
                 self.metadata = value
             except:
+                fmt = "Cannot parse '{}' as a set object."
+                msg = fmt.format(value)
+                logger.error(msg)
                 return
 
         else:
@@ -177,9 +183,15 @@ class AnnexedKeyMetadataModel(QtGui.QStandardItemModel):
     @QtCore.pyqtSlot()
     @automatically_consumed
     def _populate(self):
+        msg = "Loading key model..."
+        logger.info(msg)
+
         for obj in self._pending:
             self.insert_key(obj)
             yield
+
+        msg = "Key model fully loaded."
+        logger.info(msg)
 
     def insert_key(self, key_obj):
         key_item = AnnexedKeyItem(key_obj)

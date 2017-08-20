@@ -276,6 +276,9 @@ class AnnexedFileMetadataModel(QtGui.QStandardItemModel):
     @QtCore.pyqtSlot()
     @automatically_consumed
     def _build_tree(self):
+        msg = "Loading tree model..."
+        logger.info(msg)
+
         PendingObject = collections.namedtuple(
             'PendingObject',
             ['object', 'name', 'parent'],
@@ -324,6 +327,12 @@ class AnnexedFileMetadataModel(QtGui.QStandardItemModel):
                 obj._connect()
 
             yield
+
+        if self._pending_files:
+            msg = "Tree model folders loaded, waiting for key model..."
+        else:
+            msg = "Tree model fully loaded."
+        logger.info(msg)
 
     def insert_file(self, key_item, name, parent=None):
         if parent is None:

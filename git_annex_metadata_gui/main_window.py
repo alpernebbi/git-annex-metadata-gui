@@ -26,6 +26,7 @@ from PyQt5 import QtGui
 from PyQt5 import QtWidgets
 
 from git_annex_adapter.repo import GitAnnexRepo
+from git_annex_adapter.exceptions import NotAGitAnnexRepoError
 
 from .key_metadata_model import AnnexedKeyMetadataModel
 from .file_metadata_model import AnnexedFileMetadataModel
@@ -63,12 +64,28 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
     def open_repo(self, path=None):
         if path is None:
             path = QtWidgets.QFileDialog.getExistingDirectory(self)
-        if path:
+        if not path:
+            logger.info('No path chosen to open.')
+            return
+
+        fmt = "Opening path '{}'."
+        msg = fmt.format(path)
+        logger.info(msg)
+
+        try:
             self.repo = GitAnnexRepo(path)
+        except NotAGitAnnexRepoError:
+            fmt = "Path '{}' is not a git-annex repository."
+            msg = fmt.format(path)
+            logger.error(msg)
+        else:
             self.refresh_repo()
 
     @QtCore.pyqtSlot()
     def refresh_repo(self):
+        msg = "Refreshing key model, clearing preview and editor."
+        logger.info(msg)
+
         if self.repo:
             self.model_keys.setRepo(self.repo)
             self.stack_preview.clear()

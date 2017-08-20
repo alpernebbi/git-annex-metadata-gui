@@ -60,6 +60,10 @@ class MetadataTableView(QtWidgets.QTableView):
             header.setSectionHidden(idx, not visible)
             self.header_visibility_changed.emit(title, visible)
 
+        fmt = "{} table column for field '{}'."
+        msg = fmt.format('Showing' if visible else 'Hiding', title)
+        logger.info(msg)
+
     @QtCore.pyqtSlot(str)
     def hide_header(self, title):
         self.show_header(title, False)
@@ -90,6 +94,13 @@ class MetadataTableView(QtWidgets.QTableView):
             self.model().setFilterRegExp(pattern)
         elif type_ == 'Wildcard':
             self.model().setFilterWildcard(pattern)
+
+        if pattern:
+            fmt = "Filtered keys with {} pattern '{}'."
+            msg = fmt.format(type_, pattern)
+        else:
+            msg = "Removed key filter."
+        logger.info(msg)
 
     def _on_selection_changed(self, selected, deselected):
         indexes = selected.indexes()

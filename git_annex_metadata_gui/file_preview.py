@@ -53,24 +53,47 @@ class FilePreview(QtWidgets.QStackedWidget):
 
     @QtCore.pyqtSlot(str)
     def preview_text_file(self, path):
+        filename = path.split('/')[-1]
+
         if self.text_preview is None:
+            msg = "Text preview widget not created yet."
+            logger.critical(msg)
             return
 
         if not self.isVisible():
+            msg = "Preview widget invisible, not previewing text."
+            logger.info(msg)
             return
 
         self.setCurrentWidget(self.text_preview)
 
-        with open(path, 'r') as file:
-            text = file.read()
+        try:
+            with open(path, 'r') as file:
+                text = file.read()
+        except UnicodeDecodeError:
+            fmt = "File '{}' should be a UTF-8 text file, but isn't."
+            msg = fmt.format(filename)
+            logger.error(msg)
+            return
+
         self.text_preview.setPlainText(text)
+
+        fmt = "Previewed file '{}' as plain text."
+        msg = fmt.format(filename)
+        logger.info(msg)
 
     @QtCore.pyqtSlot(str)
     def preview_image_file(self, path):
+        filename = path.split('/')[-1]
+
         if self.graphics_preview is None:
+            msg = "Graphics preview widget not created yet."
+            logger.critical(msg)
             return
 
         if not self.isVisible():
+            msg = "Preview widget invisible, not previewing image."
+            logger.info(msg)
             return
 
         self.setCurrentWidget(self.graphics_preview)
@@ -82,10 +105,16 @@ class FilePreview(QtWidgets.QStackedWidget):
         # prevents a segmentation fault in my container setup
         image = QtGui.QImage(path)
         if image.isNull():
+            fmt = "File '{}' should be an image, but isn't."
+            msg = fmt.format(filename)
+            logger.error(msg)
             return
 
         pixmap = QtGui.QPixmap.fromImage(image)
         if pixmap.isNull():
+            fmt = "Failed to generate pixmap from image '{}'."
+            msg = fmt.format(filename)
+            logger.critical(msg)
             return
 
         pixmap_item = QtWidgets.QGraphicsPixmapItem(pixmap)
@@ -95,15 +124,57 @@ class FilePreview(QtWidgets.QStackedWidget):
             Qt.Qt.KeepAspectRatio,
         )
 
+        fmt = "Previewed file '{}' as an image."
+        msg = fmt.format(filename)
+        logger.info(msg)
+
     @QtCore.pyqtSlot(QtGui.QStandardItem)
     def preview_item(self, item):
-        mime = self._mime_from_item(item)
+        self.clear()
 
-        if not mime:
-            self.clear()
+        if not hasattr(item, 'key'):
             return
 
-        path = item.contentlocation
+        try:
+            name = item.name
+        except AttributeError:
+            name = None
+
+        try:
+            path = item.contentlocation
+        except AttributeError:
+            fmt = "Item '{}' doesn't have a contentlocation property."
+            msg = fmt.format(repr(item))
+            logger.critical(msg)
+            return
+
+        if not path:
+            fmt = "Content for key '{}' is not available."
+            msg = fmt.format(item.key)
+            logger.error(msg)
+            return
+
+        mime, encoding = None, None
+        if name:
+            mime, encoding = mimetypes.guess_type(name)
+        if not mime:
+            mime, encoding = mimetypes.guess_type(path)
+
+        if encoding:
+            fmt = "Can't decode encoding '{}'."
+            msg = fmt.format(encoding)
+            logger.error(msg)
+            return
+
+        if not mime:
+            if hasattr(item, 'name'):
+                fmt = "Couldn't recognize mimetype for file '{}' ({})."
+                msg = fmt.format(item.name, item.key)
+            else:
+                fmt = "Couldn't recognize mimetype for key '{}'."
+                msg = fmt.format(item.key)
+            logger.error(msg)
+            return
 
         if mime.startswith('text/'):
             self.preview_text_file(path)
@@ -111,26 +182,9 @@ class FilePreview(QtWidgets.QStackedWidget):
         elif mime.startswith('image/'):
             self.preview_image_file(path)
 
-    def _mime_from_item(self, item):
-        try:
-            path = item.contentlocation
-        except AttributeError:
-            return None
-        if not path:
-            return None
-
-        try:
-            name = item.name
-        except AttributeError:
-            name = None
-
-        mime, encoding = None, None
-        if name:
-            mime, encoding = mimetypes.guess_type(name)
-        if not mime:
-            mime, encoding = mimetypes.guess_type(path)
-        if encoding:
-            return None
-
-        return mime
+        else:
+            fmt = "Can't preview mimetype '{}'."
+            msg = fmt.format(mime)
+            logger.error(msg)
+            return
 

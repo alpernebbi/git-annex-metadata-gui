@@ -47,16 +47,20 @@ class MetadataEdit(QtWidgets.QGroupBox):
         self.clear()
 
         if not self.isVisible():
+            msg = "Metadata editor invisible, not setting file for it."
+            logger.info(msg)
             return
 
         if not hasattr(item, 'key'):
             return
+
         self._item = item
 
         if hasattr(item, 'name'):
-            self.setTitle(item.name)
+            desc = item.name
         else:
-            self.setTitle(item.key)
+            desc = item.key
+        self.setTitle(desc)
 
         model = self._item.model()
         model.columnsInserted.connect(self._on_columns_inserted)
@@ -70,6 +74,10 @@ class MetadataEdit(QtWidgets.QGroupBox):
             self._new_field_edit = line_edit
 
         self.update_fields()
+
+        fmt = "File '{}' set for metadata editing."
+        msg = fmt.format(desc)
+        logger.info(msg)
 
     @QtCore.pyqtSlot()
     def clear(self):
@@ -126,6 +134,10 @@ class MetadataEdit(QtWidgets.QGroupBox):
     def _request_new_field(self):
         field = self._new_field_edit.text()
         if field:
+            fmt = "Requesting to create new metadata field '{}'."
+            msg = fmt.format(field)
+            logger.info(msg)
+
             self._new_field_edit.clear()
             self.new_field_requested.emit(field)
 

@@ -59,6 +59,10 @@ class MetadataTreeView(QtWidgets.QTreeView):
             header.setSectionHidden(idx, not visible)
             self.header_visibility_changed.emit(title, visible)
 
+        fmt = "{} tree column for field '{}'."
+        msg = fmt.format('Showing' if visible else 'Hiding', title)
+        logger.info(msg)
+
     @QtCore.pyqtSlot(str)
     def hide_header(self, title):
         self.show_header(title, False)
@@ -75,6 +79,11 @@ class MetadataTreeView(QtWidgets.QTreeView):
     def rebuild_treeish(self):
         if not self.model():
             return
+
+        fmt = "Building tree for git treeish '{}'."
+        msg = fmt.format(self._treeish)
+        logger.info(msg)
+
         self._bare_model.setTreeish(self._treeish)
 
     def _on_selection_changed(self, selected, deselected):
