@@ -59,8 +59,19 @@ def setup_logger(main_window, debug=False):
     stderr_handler = logging.StreamHandler(sys.stderr)
     stderr_handler.setLevel(logging.WARNING)
 
+    stderr_formatter = logging.Formatter(
+        fmt='[{asctime}] [{name}] [{levelname}]: {message}',
+        style='{',
+    )
+    stderr_handler.setFormatter(stderr_formatter)
+
     statusbar_handler = StatusBarLogHandler(main_window.statusBar())
     statusbar_handler.setLevel(logging.INFO)
+    statusbar_formatter = logging.Formatter(
+        fmt='{message}',
+        style='{',
+    )
+    statusbar_handler.setFormatter(statusbar_formatter)
 
     root_logger = logging.getLogger()
     root_logger.addHandler(stderr_handler)
