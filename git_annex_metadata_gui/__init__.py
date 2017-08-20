@@ -20,6 +20,7 @@ import argparse
 import sys
 import logging
 
+from PyQt5 import Qt
 from PyQt5 import QtCore
 from PyQt5 import QtGui
 from PyQt5 import QtWidgets
@@ -44,6 +45,13 @@ def main():
     app = QtWidgets.QApplication(qt_args)
     main_window = MainWindow()
     setup_logger(main_window, debug=my_args.debug)
+
+    if my_args.repo_path:
+        QtCore.QMetaObject.invokeMethod(
+            main_window, 'open_repo',
+            Qt.Qt.QueuedConnection,
+            QtCore.Q_ARG(str, my_args.repo_path),
+        )
 
     main_window.show()
     return app.exec_()
@@ -75,9 +83,16 @@ def setup_logger(main_window, debug=False):
 def parse_args(args):
     parser = argparse.ArgumentParser(
         description="A graphical interface for git-annex metadata.",
-        usage="%(prog)s [option ...]",
+        usage="%(prog)s [option ...] [repo-path]",
         epilog="Also see the manual entry for qt5options(7)",
         add_help=True,
+    )
+
+    parser.add_argument(
+        "repo_path",
+        metavar='repo-path',
+        nargs='?',
+        help="path of the git-annex repository",
     )
 
     parser.add_argument(

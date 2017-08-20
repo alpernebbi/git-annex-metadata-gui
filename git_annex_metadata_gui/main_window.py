@@ -59,8 +59,10 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         super().retranslateUi(window)
 
     @QtCore.pyqtSlot()
-    def open_repo(self):
-        path = QtWidgets.QFileDialog.getExistingDirectory(self)
+    @QtCore.pyqtSlot(str)
+    def open_repo(self, path=None):
+        if path is None:
+            path = QtWidgets.QFileDialog.getExistingDirectory(self)
         if path:
             self.repo = GitAnnexRepo(path)
             self.refresh_repo()
