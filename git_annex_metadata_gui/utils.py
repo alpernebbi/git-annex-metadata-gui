@@ -42,7 +42,7 @@ def parse_as_set(x):
         msg = fmt.format(x)
         raise ValueError(msg) from err
 
-
+autoconsume_timeout = 0.05
 def automatically_consumed(function):
     generator = None
 
@@ -53,7 +53,7 @@ def automatically_consumed(function):
             generator = function(instance)
 
         try:
-            endtime = time.monotonic() + 0.1
+            endtime = time.monotonic() + autoconsume_timeout
             while time.monotonic() < endtime:
                 next(generator)
 

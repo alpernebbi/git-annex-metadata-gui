@@ -25,6 +25,7 @@ from PyQt5 import QtCore
 from PyQt5 import QtGui
 from PyQt5 import QtWidgets
 
+from . import utils
 from .utils import StatusBarLogHandler
 from .main_window import MainWindow
 
@@ -45,6 +46,9 @@ def main():
     app = QtWidgets.QApplication(qt_args)
     main_window = MainWindow()
     setup_logger(main_window, debug=my_args.debug)
+
+    if my_args.full_load:
+        utils.autoconsume_timeout = float('inf')
 
     if my_args.repo_path:
         QtCore.QMetaObject.invokeMethod(
@@ -106,6 +110,12 @@ def parse_args(args):
         "--debug",
         action='store_true',
         help="print debug-level log messages",
+    )
+
+    parser.add_argument(
+        "--full-load",
+        action='store_true',
+        help="don't load models incrementially",
     )
 
     namespace, remaining = parser.parse_known_args()
