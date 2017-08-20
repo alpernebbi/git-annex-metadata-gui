@@ -30,20 +30,14 @@ from .utils import StatusBarLogHandler
 from .main_window import MainWindow
 
 app = None
-my_args = None
-qt_args = None
 
 logger = logging.getLogger(__name__)
 
 def main():
-    prog, *args = sys.argv
-
-    global my_args, qt_args
-    my_args, remaining = parse_args(args)
-    qt_args = [prog] + remaining
-
     global app
-    app = QtWidgets.QApplication(qt_args)
+    app = QtWidgets.QApplication(sys.argv)
+    my_args = parse_args(app.arguments())
+
     main_window = MainWindow()
     setup_logger(main_window, debug=my_args.debug)
 
@@ -84,7 +78,7 @@ def setup_logger(main_window, debug=False):
     sys.excepthook = excepthook
 
 
-def parse_args(args):
+def parse_args(argv):
     parser = argparse.ArgumentParser(
         description="A graphical interface for git-annex metadata.",
         usage="%(prog)s [option ...] [repo-path]",
@@ -118,8 +112,7 @@ def parse_args(args):
         help="don't load models incrementially",
     )
 
-    namespace, remaining = parser.parse_known_args()
-    return namespace, remaining
+    return parser.parse_args(argv[1:])
 
 
 if __name__ == "__main__":
