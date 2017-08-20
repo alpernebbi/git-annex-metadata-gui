@@ -148,7 +148,7 @@ class Ui_MainWindow(object):
         self.label_set_treeish.setBuddy(self.edit_set_treeish)
 
         self.retranslateUi(MainWindow)
-        self.widget_tabs.setCurrentIndex(0)
+        self.widget_tabs.setCurrentIndex(1)
         self.action_exit.triggered.connect(MainWindow.close)
         self.action_refresh.triggered.connect(MainWindow.refresh_repo)
         self.action_open.triggered.connect(MainWindow.open_repo)
