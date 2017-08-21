@@ -70,6 +70,8 @@ class MetadataEdit(QtWidgets.QGroupBox):
         if self._new_field_edit is None:
             line_edit = AutoSizeLineEdit()
             line_edit.editingFinished.connect(self._request_new_field)
+            line_edit.setPlaceholderText('+')
+            line_edit.setAlignment(Qt.Qt.AlignCenter)
             self.layout().addRow(line_edit, QtWidgets.QWidget())
             self._new_field_edit = line_edit
 
