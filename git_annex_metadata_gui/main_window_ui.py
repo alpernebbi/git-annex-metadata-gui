@@ -38,6 +38,7 @@ class Ui_MainWindow(object):
         self.gridLayout_2.addWidget(self.combo_filter_keys, 1, 2, 1, 1)
         self.view_keys = MetadataTableView(self.tab_keys)
         self.view_keys.setAlternatingRowColors(True)
+        self.view_keys.setSelectionMode(QtWidgets.QAbstractItemView.SingleSelection)
         self.view_keys.setHorizontalScrollMode(QtWidgets.QAbstractItemView.ScrollPerPixel)
         self.view_keys.setShowGrid(False)
         self.view_keys.setSortingEnabled(True)
