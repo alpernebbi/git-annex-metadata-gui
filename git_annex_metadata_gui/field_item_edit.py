@@ -65,6 +65,7 @@ class FieldItemEdit(QtWidgets.QWidget):
         widget = AutoSizeLineEdit()
         widget.editingFinished.connect(self._on_editing_finished)
         widget.setClearButtonEnabled(True)
+        widget.setAlignment(Qt.Qt.AlignCenter)
         return widget
 
     def update_widgets(self):
