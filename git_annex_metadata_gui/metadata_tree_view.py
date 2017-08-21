@@ -73,7 +73,10 @@ class MetadataTreeView(QtWidgets.QTreeView):
 
     @QtCore.pyqtSlot(str)
     def set_treeish_to_build(self, treeish):
-        self._treeish = treeish
+        if treeish:
+            self._treeish = treeish
+        else:
+            self._treeish = 'HEAD'
 
     @QtCore.pyqtSlot()
     def rebuild_treeish(self):
