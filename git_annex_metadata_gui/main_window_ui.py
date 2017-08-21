@@ -180,6 +180,7 @@ class Ui_MainWindow(object):
         self.combo_filter_keys.setItemText(2, _translate("MainWindow", "Wildcard"))
         self.widget_tabs.setTabText(self.widget_tabs.indexOf(self.tab_keys), _translate("MainWindow", "All Keys"))
         self.label_set_treeish.setText(_translate("MainWindow", "Set Treeish:"))
+        self.edit_set_treeish.setText(_translate("MainWindow", "HEAD"))
         self.button_set_treeish.setText(_translate("MainWindow", "Build Treeish"))
         self.widget_tabs.setTabText(self.widget_tabs.indexOf(self.tab_head), _translate("MainWindow", "Work Tree"))
         self.menu_file.setTitle(_translate("MainWindow", "&File"))
