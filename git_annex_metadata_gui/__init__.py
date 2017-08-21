@@ -105,7 +105,7 @@ def parse_args(argv):
     )
 
     parser.add_argument(
-        "--version", "-v",
+        "-v", "--version",
         action='version',
         version="%(prog)s v0.2.0",
         help="print version information and exit",
