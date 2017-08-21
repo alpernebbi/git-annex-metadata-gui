@@ -60,6 +60,8 @@ class AnnexedFileItem(DataProxyItem):
     def data(self, role=Qt.Qt.DisplayRole):
         if role == Qt.Qt.DisplayRole:
             return self._name
+        if role == Qt.Qt.ToolTipRole:
+            return self._name
         if role == Qt.Qt.FontRole:
             return QtGui.QStandardItem.data(self, role=role)
         else:
@@ -100,6 +102,7 @@ class AnnexedDirectoryItem(QtGui.QStandardItem):
         self._name = dirname
 
         self.setText(self._name)
+        self.setToolTip(self._name)
 
         icon = QtWidgets.QFileIconProvider.Folder
         icon = QtWidgets.QFileIconProvider().icon(icon)

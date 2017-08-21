@@ -34,6 +34,7 @@ class AnnexedKeyItem(QtGui.QStandardItem):
         self._obj = key_obj
 
         self.setText(self.key)
+        self.setToolTip(self.key)
 
         font = QtGui.QFontDatabase.FixedFont
         font = QtGui.QFontDatabase().systemFont(font)
