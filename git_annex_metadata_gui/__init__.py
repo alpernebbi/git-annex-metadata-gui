@@ -25,7 +25,7 @@ from PyQt5 import QtCore
 from PyQt5 import QtGui
 from PyQt5 import QtWidgets
 
-from . import utils
+from .utils import AutoConsumed
 from .utils import StatusBarLogHandler
 from .main_window import MainWindow
 
@@ -42,7 +42,7 @@ def main():
     setup_logger(main_window, debug=my_args.debug)
 
     if my_args.full_load:
-        utils.autoconsume_timeout = float('inf')
+        AutoConsumed._timeout = float('inf')
 
     if my_args.repo_path:
         QtCore.QMetaObject.invokeMethod(

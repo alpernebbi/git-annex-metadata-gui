@@ -27,7 +27,7 @@ from PyQt5 import QtWidgets
 from git_annex_adapter.repo import AnnexedFile
 from git_annex_adapter.repo import AnnexedFileTree
 
-from .utils import automatically_consumed
+from .utils import AutoConsumed
 from .utils import DataProxyItem
 
 logger = logging.getLogger(__name__)
@@ -264,6 +264,11 @@ class AnnexedFileMetadataModel(QtGui.QStandardItemModel):
         if treeish is None:
             treeish = 'HEAD'
 
+        if self._build_tree.running():
+            msg = "Aborted loading previous tree model."
+            logger.info(msg)
+            self._build_tree.stop()
+
         self._treeish = treeish
         self._pending_files = collections.defaultdict(list)
         self.clear()
@@ -271,10 +276,10 @@ class AnnexedFileMetadataModel(QtGui.QStandardItemModel):
         headers = ['Filename', *self._model.fields[1:]]
         self.setHorizontalHeaderLabels(headers)
 
-        self._build_tree()
+        self._build_tree.start()
 
     @QtCore.pyqtSlot()
-    @automatically_consumed
+    @AutoConsumed
     def _build_tree(self):
         msg = "Loading tree model..."
         logger.info(msg)

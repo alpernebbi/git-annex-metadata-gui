@@ -23,7 +23,7 @@ from PyQt5 import QtGui
 from PyQt5 import QtWidgets
 
 from .utils import parse_as_set
-from .utils import automatically_consumed
+from .utils import AutoConsumed
 
 logger = logging.getLogger(__name__)
 
@@ -171,6 +171,11 @@ class AnnexedKeyMetadataModel(QtGui.QStandardItemModel):
         self.repo = None
 
     def setRepo(self, repo):
+        if self._populate.running():
+            self._populate.stop()
+            msg = "Aborted loading previous key model."
+            logger.info(msg)
+
         self.repo = repo
         self.fields = ['Git-Annex Key']
         self.key_items = {}
@@ -178,10 +183,10 @@ class AnnexedKeyMetadataModel(QtGui.QStandardItemModel):
 
         self.clear()
         self.setHorizontalHeaderLabels(self.fields)
-        self._populate()
+        self._populate.start()
 
     @QtCore.pyqtSlot()
-    @automatically_consumed
+    @AutoConsumed
     def _populate(self):
         msg = "Loading key model..."
         logger.info(msg)

@@ -42,31 +42,55 @@ def parse_as_set(x):
         msg = fmt.format(x)
         raise ValueError(msg) from err
 
-autoconsume_timeout = 0.05
-def automatically_consumed(function):
-    generator = None
 
-    @functools.wraps(function)
-    def wrapper(instance):
-        nonlocal generator
-        if generator is None:
-            generator = function(instance)
+class AutoConsumed:
+    _timeout = 0.05
+
+    def __init__(self, function):
+        self._function = function
+        self._generator = None
+        self._instance = None
+        functools.update_wrapper(self, function)
+
+    def start(self, *args):
+        self._generator = self._function(self._instance, *args)
+        self()
+
+    def running(self):
+        return self._generator is not None
+
+    def stop(self):
+        self._generator = None
+
+    def __call__(self, instance=None):
+        if instance is not None and instance is not self._instance:
+            fmt = "Instance mismatch on autoconsumer {}, ({} vs {})."
+            msg = fmt.format(
+                self._function.__name__,
+                instance, self._instance,
+            )
+            logger.critical(msg)
+
+        if self._generator is None:
+            return
 
         try:
-            endtime = time.monotonic() + autoconsume_timeout
+            endtime = time.monotonic() + self._timeout
             while time.monotonic() < endtime:
-                next(generator)
+                next(self._generator)
 
         except StopIteration:
-            generator = None
+            self._generator = None
 
         else:
             QtCore.QMetaObject.invokeMethod(
-                instance, function.__name__,
+                self._instance, self._function.__name__,
                 Qt.Qt.QueuedConnection,
             )
 
-    return wrapper
+    def __get__(self, instance, owner):
+        self._instance = instance
+        return self
 
 
 class DataProxyItem(QtGui.QStandardItem):
