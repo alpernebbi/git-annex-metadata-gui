@@ -32,3 +32,10 @@ class AutoSizeLineEdit(QtWidgets.QLineEdit):
         text_width = self.fontMetrics().width(self.text())
         return QtCore.QSize(text_width + min_width, height)
 
+    def __repr__(self):
+        return "{name}.{cls}({args})".format(
+            name=__name__,
+            cls=self.__class__.__name__,
+            args='',
+        )
+

@@ -109,3 +109,10 @@ class MetadataTreeView(QtWidgets.QTreeView):
     def _on_model_reset(self):
         self._fields = []
         self.model_reset.emit()
+
+    def __repr__(self):
+        return "{name}.{cls}({args})".format(
+            name=__name__,
+            cls=self.__class__.__name__,
+            args='',
+        )

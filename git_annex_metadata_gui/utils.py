@@ -92,6 +92,13 @@ class AutoConsumed:
         self._instance = instance
         return self
 
+    def __repr__(self):
+        return "{name}.{cls}({args})".format(
+            name=__name__,
+            cls=self.__class__.__name__,
+            args=self._function.__name__,
+        )
+
 
 class DataProxyItem(QtGui.QStandardItem):
     def __init__(self, item):
@@ -137,4 +144,11 @@ class StatusBarLogHandler(logging.Handler):
         msg = self.format(record)
         line = msg.split('\n')[0]
         self._statusbar.showMessage(line, msecs=5000)
+
+    def __repr__(self):
+        return "{name}.{cls}({args})".format(
+            name=__name__,
+            cls=self.__class__.__name__,
+            args=self._statusbar,
+        )
 
