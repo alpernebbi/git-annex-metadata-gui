@@ -347,7 +347,7 @@
   </connection>
   <connection>
    <sender>action_dock_metadata</sender>
-   <signal>toggled(bool)</signal>
+   <signal>triggered(bool)</signal>
    <receiver>dock_metadata</receiver>
    <slot>setVisible(bool)</slot>
    <hints>
@@ -363,7 +363,7 @@
   </connection>
   <connection>
    <sender>action_dock_preview</sender>
-   <signal>toggled(bool)</signal>
+   <signal>triggered(bool)</signal>
    <receiver>dock_preview</receiver>
    <slot>setVisible(bool)</slot>
    <hints>
