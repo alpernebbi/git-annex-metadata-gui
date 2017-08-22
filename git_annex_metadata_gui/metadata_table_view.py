@@ -20,6 +20,8 @@ from PyQt5 import QtCore
 from PyQt5 import QtGui
 from PyQt5 import QtWidgets
 
+from .utils import StandardItemProxyModel
+
 logger = logging.getLogger(__name__)
 
 
@@ -36,7 +38,7 @@ class MetadataTableView(QtWidgets.QTableView):
 
     def setModel(self, model):
         self._bare_model = model
-        self._proxy_model = QtCore.QSortFilterProxyModel(model)
+        self._proxy_model = StandardItemProxyModel(model)
         self._proxy_model.setSourceModel(model)
         super().setModel(self._proxy_model)
 

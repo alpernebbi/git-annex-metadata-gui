@@ -22,6 +22,7 @@ from PyQt5 import QtWidgets
 
 logger = logging.getLogger(__name__)
 
+from .utils import StandardItemProxyModel
 
 class MetadataTreeView(QtWidgets.QTreeView):
     item_selected = QtCore.pyqtSignal(QtGui.QStandardItem)
@@ -35,7 +36,7 @@ class MetadataTreeView(QtWidgets.QTreeView):
 
     def setModel(self, model):
         self._bare_model = model
-        self._proxy_model = QtCore.QSortFilterProxyModel(model)
+        self._proxy_model = StandardItemProxyModel(model)
         self._proxy_model.setSourceModel(model)
         super().setModel(self._proxy_model)
 

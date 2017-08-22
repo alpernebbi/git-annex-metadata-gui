@@ -41,6 +41,7 @@ class AnnexedFileItem(DataProxyItem):
         self.setSelectable(True)
         self.setEditable(False)
         self.setEnabled(True)
+        self.setFlags(self.flags() | Qt.Qt.ItemNeverHasChildren)
 
     @property
     def key(self):
@@ -66,6 +67,19 @@ class AnnexedFileItem(DataProxyItem):
             return QtGui.QStandardItem.data(self, role=role)
         else:
             return super().data(role=role)
+
+    def __lt__(self, other):
+        if other is None:
+            return True
+
+        elif isinstance(other, AnnexedFileItem):
+            return super().__lt__(other)
+
+        elif isinstance(other, AnnexedDirectoryItem):
+            return False
+
+        else:
+            return NotImplemented
 
     def __repr__(self):
         return "{name}.{cls}({args})".format(
@@ -95,6 +109,28 @@ class AnnexedFileFieldItem(DataProxyItem):
     def contentlocation(self):
         return self._item.contentlocation
 
+    def __lt__(self, other):
+        if other is None:
+            return True
+
+        elif isinstance(other, AnnexedFileFieldItem):
+            lhs = self.data(role=Qt.Qt.UserRole)
+            rhs = other.data(role=Qt.Qt.UserRole)
+            if len(lhs) == 0:
+                return False
+            elif len(rhs) == 0:
+                return True
+            elif len(lhs) == len(rhs) == 1:
+                return super().__lt__(other)
+            else:
+                return len(lhs) > len(rhs)
+
+        elif isinstance(other, AnnexedDirectoryFieldItem):
+            return True
+
+        else:
+            return NotImplemented
+
 
 class AnnexedDirectoryItem(QtGui.QStandardItem):
     def __init__(self, dirname):
@@ -115,6 +151,19 @@ class AnnexedDirectoryItem(QtGui.QStandardItem):
     def type(self):
         return QtGui.QStandardItem.UserType + 6
 
+    def __lt__(self, other):
+        if other is None:
+            return True
+
+        elif isinstance(other, AnnexedFileItem):
+            return True
+
+        elif isinstance(other, AnnexedDirectoryItem):
+            return super().__lt__(other)
+
+        else:
+            return NotImplemented
+
     def __repr__(self):
         return "{name}.{cls}({args})".format(
             name=__name__,
@@ -133,6 +182,7 @@ class AnnexedDirectoryFieldItem(QtGui.QStandardItem):
         self.setSelectable(True)
         self.setEditable(False)
         self.setEnabled(True)
+        self.setFlags(self.flags() | Qt.Qt.ItemNeverHasChildren)
 
         if self._item.model():
             self._connect()
@@ -221,6 +271,28 @@ class AnnexedDirectoryFieldItem(QtGui.QStandardItem):
     def _on_rows_removed(self, parent, first, last):
         if parent == self._item.index():
             self._emit_data_changed()
+
+    def __lt__(self, other):
+        if other is None:
+            return True
+
+        elif isinstance(other, AnnexedFileFieldItem):
+            return True
+
+        elif isinstance(other, AnnexedDirectoryFieldItem):
+            lhs = self.data(role=Qt.Qt.UserRole)
+            rhs = other.data(role=Qt.Qt.UserRole)
+            if len(lhs) == 0:
+                return False
+            elif len(rhs) == 0:
+                return True
+            elif len(lhs) == len(rhs) == 1:
+                return super().__lt__(other)
+            else:
+                return len(lhs) > len(rhs)
+
+        else:
+            return NotImplemented
 
     def __repr__(self):
         return "{name}.{cls}({args})".format(

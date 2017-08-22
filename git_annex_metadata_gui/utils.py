@@ -152,3 +152,28 @@ class StatusBarLogHandler(logging.Handler):
             args=self._statusbar,
         )
 
+
+class StandardItemProxyModel(QtCore.QSortFilterProxyModel):
+    def lessThan(self, source_left, source_right):
+        descending = (self.sortOrder() == Qt.Qt.DescendingOrder)
+
+        lhs_flags = source_left.sibling(source_left.row(), 0).flags()
+        lhs_is_dir = not bool(lhs_flags & Qt.Qt.ItemNeverHasChildren)
+
+        rhs_flags = source_right.sibling(source_right.row(), 0).flags()
+        rhs_is_dir = not bool(rhs_flags & Qt.Qt.ItemNeverHasChildren)
+
+        if lhs_is_dir and (not rhs_is_dir):
+            return not descending
+        elif (not lhs_is_dir) and rhs_is_dir:
+            return descending
+
+        model = self.sourceModel()
+        lhs = model.itemFromIndex(source_left)
+        rhs = model.itemFromIndex(source_right)
+
+        try:
+            return (lhs < rhs)
+        except TypeError:
+            return super().lessThan(source_left, source_right)
+

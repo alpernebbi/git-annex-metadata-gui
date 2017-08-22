@@ -47,6 +47,7 @@ class AnnexedKeyItem(QtGui.QStandardItem):
         self.setSelectable(True)
         self.setEditable(False)
         self.setEnabled(True)
+        self.setFlags(self.flags() | Qt.Qt.ItemNeverHasChildren)
 
     @property
     def metadata(self):
@@ -80,6 +81,7 @@ class AnnexedFieldItem(QtGui.QStandardItem):
         self.setSelectable(True)
         self.setEditable(True)
         self.setEnabled(True)
+        self.setFlags(self.flags() | Qt.Qt.ItemNeverHasChildren)
 
     @property
     def key(self):
@@ -152,6 +154,25 @@ class AnnexedFieldItem(QtGui.QStandardItem):
 
         else:
             super().setData(value, role=role)
+
+    def __lt__(self, other):
+        if other is None:
+            return True
+
+        elif isinstance(other, AnnexedFieldItem):
+            lhs = self.data(role=Qt.Qt.UserRole)
+            rhs = other.data(role=Qt.Qt.UserRole)
+            if len(lhs) == 0:
+                return False
+            elif len(rhs) == 0:
+                return True
+            elif len(lhs) == len(rhs) == 1:
+                return super().__lt__(other)
+            else:
+                return len(lhs) > len(rhs)
+
+        else:
+            return NotImplemented
 
     def __repr__(self):
         return "{name}.{cls}({args})".format(
