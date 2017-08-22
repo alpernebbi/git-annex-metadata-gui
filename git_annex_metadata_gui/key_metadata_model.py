@@ -64,6 +64,32 @@ class AnnexedKeyItem(QtGui.QStandardItem):
     def type(self):
         return QtGui.QStandardItem.UserType + 1
 
+    def __lt__(self, other):
+        if other is None:
+            return True
+
+        elif isinstance(other, AnnexedKeyItem):
+            lhs = self.data(role=Qt.Qt.DisplayRole)
+            rhs = other.data(role=Qt.Qt.DisplayRole)
+
+            lhs_pre, lhs_name = lhs.split('--')
+            lhs_backend, *lhs_fields = lhs_pre.split('-')
+            lhs_fields = [(f[0], int(f[1:])) for f in lhs_fields]
+            lhs = (lhs_backend, *lhs_fields, lhs_name)
+
+            rhs_pre, rhs_name = rhs.split('--')
+            rhs_backend, *rhs_fields = rhs_pre.split('-')
+            rhs_fields = [(f[0], int(f[1:])) for f in rhs_fields]
+            rhs = (rhs_backend, *rhs_fields, rhs_name)
+
+            try:
+                return lhs > rhs
+            except TypeError:
+                return super().__lt__(other)
+
+        else:
+            return NotImplemented
+
     def __repr__(self):
         return "{name}.{cls}({args})".format(
             name=__name__,
