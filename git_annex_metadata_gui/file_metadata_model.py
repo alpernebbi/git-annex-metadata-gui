@@ -202,6 +202,9 @@ class AnnexedDirectoryFieldItem(QtGui.QStandardItem):
         model.rowsInserted.connect(self._on_rows_inserted)
         model.rowsMoved.connect(self._on_rows_moved)
         model.rowsRemoved.connect(self._on_rows_removed)
+        model.columnsInserted.connect(self._on_columns_inserted)
+        model.columnsMoved.connect(self._on_columns_moved)
+        model.columnsRemoved.connect(self._on_columns_removed)
 
         self._connected = True
 
@@ -273,6 +276,20 @@ class AnnexedDirectoryFieldItem(QtGui.QStandardItem):
             self._emit_data_changed()
 
     def _on_rows_removed(self, parent, first, last):
+        if parent == self._item.index():
+            self._emit_data_changed()
+
+    def _on_columns_inserted(self, parent, first, last):
+        if parent == self._item.index():
+            self._emit_data_changed()
+
+    def _on_columns_moved(self, parent, start, end, destination, col):
+        if parent == self._item.index():
+            self._emit_data_changed()
+        if destination == self._item.index():
+            self._emit_data_changed()
+
+    def _on_columns_removed(self, parent, first, last):
         if parent == self._item.index():
             self._emit_data_changed()
 
