@@ -121,7 +121,11 @@ class AnnexedFileFieldItem(DataProxyItem):
             elif len(rhs) == 0:
                 return True
             elif len(lhs) == len(rhs) == 1:
-                return super().__lt__(other)
+                lhs_, rhs_ = lhs.pop(), rhs.pop()
+                try:
+                    return int(lhs_) > int(rhs_)
+                except ValueError:
+                    return super().__lt__(other)
             else:
                 return len(lhs) > len(rhs)
 
@@ -287,7 +291,11 @@ class AnnexedDirectoryFieldItem(QtGui.QStandardItem):
             elif len(rhs) == 0:
                 return True
             elif len(lhs) == len(rhs) == 1:
-                return super().__lt__(other)
+                lhs_, rhs_ = lhs.pop(), rhs.pop()
+                try:
+                    return int(lhs_) > int(rhs_)
+                except ValueError:
+                    return super().__lt__(other)
             else:
                 return len(lhs) > len(rhs)
 
