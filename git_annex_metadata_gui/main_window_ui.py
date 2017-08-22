@@ -84,6 +84,8 @@ class Ui_MainWindow(object):
         self.menu_headers.setObjectName("menu_headers")
         self.menu_docks = QtWidgets.QMenu(self.menubar)
         self.menu_docks.setObjectName("menu_docks")
+        self.menu_help = QtWidgets.QMenu(self.menubar)
+        self.menu_help.setObjectName("menu_help")
         MainWindow.setMenuBar(self.menubar)
         self.statusbar = QtWidgets.QStatusBar(MainWindow)
         self.statusbar.setObjectName("statusbar")
@@ -137,14 +139,18 @@ class Ui_MainWindow(object):
         self.action_dock_metadata.setCheckable(True)
         self.action_dock_metadata.setChecked(True)
         self.action_dock_metadata.setObjectName("action_dock_metadata")
+        self.action_about = QtWidgets.QAction(MainWindow)
+        self.action_about.setObjectName("action_about")
         self.menu_file.addAction(self.action_open)
         self.menu_file.addAction(self.action_refresh)
         self.menu_file.addAction(self.action_exit)
         self.menu_docks.addAction(self.action_dock_preview)
         self.menu_docks.addAction(self.action_dock_metadata)
+        self.menu_help.addAction(self.action_about)
         self.menubar.addAction(self.menu_file.menuAction())
         self.menubar.addAction(self.menu_headers.menuAction())
         self.menubar.addAction(self.menu_docks.menuAction())
+        self.menubar.addAction(self.menu_help.menuAction())
         self.label_filter_keys.setBuddy(self.edit_filter_keys)
         self.label_set_treeish.setBuddy(self.edit_set_treeish)
 
@@ -170,6 +176,7 @@ class Ui_MainWindow(object):
         self.edit_set_treeish.textEdited['QString'].connect(self.view_head.set_treeish_to_build)
         self.edit_set_treeish.returnPressed.connect(self.view_head.rebuild_treeish)
         self.button_set_treeish.clicked.connect(self.view_head.rebuild_treeish)
+        self.action_about.triggered.connect(MainWindow.show_about_dialog)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
 
     def retranslateUi(self, MainWindow):
@@ -187,6 +194,7 @@ class Ui_MainWindow(object):
         self.menu_file.setTitle(_translate("MainWindow", "&File"))
         self.menu_headers.setTitle(_translate("MainWindow", "Headers"))
         self.menu_docks.setTitle(_translate("MainWindow", "Docks"))
+        self.menu_help.setTitle(_translate("MainWindow", "Help"))
         self.dock_preview.setWindowTitle(_translate("MainWindow", "File Preview"))
         self.dock_metadata.setWindowTitle(_translate("MainWindow", "Metadata Editor"))
         self.action_open.setText(_translate("MainWindow", "&Open"))
@@ -197,6 +205,7 @@ class Ui_MainWindow(object):
         self.action_refresh.setShortcut(_translate("MainWindow", "F5"))
         self.action_dock_preview.setText(_translate("MainWindow", "File Preview"))
         self.action_dock_metadata.setText(_translate("MainWindow", "Metadata Editor"))
+        self.action_about.setText(_translate("MainWindow", "About"))
 
 from git_annex_metadata_gui.file_preview import FilePreview
 from git_annex_metadata_gui.metadata_edit import MetadataEdit

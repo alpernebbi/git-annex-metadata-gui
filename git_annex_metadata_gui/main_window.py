@@ -132,6 +132,11 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         empty = len(self.menu_headers.actions()) == 0
         self.menu_headers.setDisabled(empty)
 
+    @QtCore.pyqtSlot()
+    def show_about_dialog(self):
+        title = "About Git-Annex Metadata Gui"
+        QtWidgets.QMessageBox.about(self, title, about_msg)
+
     def __repr__(self):
         return "{name}.{cls}({args})".format(
             name=__name__,
@@ -139,3 +144,51 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
             args='',
         )
 
+
+about_msg = """\
+<p>
+<b>Git-Annex Metadata Gui</b> <br />
+Version 0.2.0
+</p>
+
+<p>
+A graphical interface to the metadata functionality of \
+<a href="https://git-annex.branchable.com/">git-annex</a>.
+</p>
+
+<p>
+Source code and bug tracking is available on \
+<a href="https://github.com/alpernebbi/git-annex-metadata-gui/">\
+GitHub</a>.\
+</p>
+
+<hr>
+<p>
+Copyright (C) 2017 Alper Nebi Yasak \
+&lt;<a href="mailto:alpernebiyasak@gmail.com">\
+alpernebiyasak@gmail.com\
+</a>&gt;
+</p>
+
+<p>
+This program is free software: you can redistribute it and/or modify \
+it under the terms of the GNU General Public License as published by \
+the Free Software Foundation, either version 3 of the License, or \
+(at your option) any later version.
+</p>
+
+<p>
+This program is distributed in the hope that it will be useful, \
+but WITHOUT ANY WARRANTY; without even the implied warranty of \
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the \
+GNU General Public License for more details.
+</p>
+
+<p>
+You should have received a copy of the GNU General Public License \
+along with this program. If not, see \
+&lt;<a href="https://www.gnu.org/licenses/">\
+https://www.gnu.org/licenses/\
+</a>&gt;.\
+</p>
+"""

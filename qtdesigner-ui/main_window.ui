@@ -179,9 +179,16 @@
     <addaction name="action_dock_preview"/>
     <addaction name="action_dock_metadata"/>
    </widget>
+   <widget class="QMenu" name="menu_help">
+    <property name="title">
+     <string>Help</string>
+    </property>
+    <addaction name="action_about"/>
+   </widget>
    <addaction name="menu_file"/>
    <addaction name="menu_headers"/>
    <addaction name="menu_docks"/>
+   <addaction name="menu_help"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
   <widget class="QDockWidget" name="dock_preview">
@@ -273,6 +280,11 @@
    </property>
    <property name="text">
     <string>Metadata Editor</string>
+   </property>
+  </action>
+  <action name="action_about">
+   <property name="text">
+    <string>About</string>
    </property>
   </action>
  </widget>
@@ -435,8 +447,8 @@
    <slot>preview_item(QStandardItem)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>259</x>
-     <y>315</y>
+     <x>101</x>
+     <y>76</y>
     </hint>
     <hint type="destinationlabel">
      <x>662</x>
@@ -467,8 +479,8 @@
    <slot>set_item(QStandardItem)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>259</x>
-     <y>315</y>
+     <x>101</x>
+     <y>76</y>
     </hint>
     <hint type="destinationlabel">
      <x>662</x>
@@ -483,8 +495,8 @@
    <slot>create_header_menu_action(QString)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>259</x>
-     <y>315</y>
+     <x>101</x>
+     <y>76</y>
     </hint>
     <hint type="destinationlabel">
      <x>399</x>
@@ -531,8 +543,8 @@
    <slot>clear_header_menu()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>259</x>
-     <y>315</y>
+     <x>101</x>
+     <y>76</y>
     </hint>
     <hint type="destinationlabel">
      <x>399</x>
@@ -547,12 +559,12 @@
    <slot>set_filter_pattern(QString)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>253</x>
-     <y>541</y>
+     <x>72</x>
+     <y>85</y>
     </hint>
     <hint type="destinationlabel">
-     <x>259</x>
-     <y>297</y>
+     <x>101</x>
+     <y>76</y>
     </hint>
    </hints>
   </connection>
@@ -563,12 +575,12 @@
    <slot>set_filter_type(QString)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>449</x>
-     <y>529</y>
+     <x>101</x>
+     <y>85</y>
     </hint>
     <hint type="destinationlabel">
-     <x>449</x>
-     <y>482</y>
+     <x>101</x>
+     <y>76</y>
     </hint>
    </hints>
   </connection>
@@ -620,11 +632,28 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>action_about</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>show_about_dialog()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>399</x>
+     <y>299</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <slots>
   <slot>open_repo()</slot>
   <slot>refresh_repo()</slot>
   <slot>clear_header_menu()</slot>
   <slot>create_header_menu_action(QString)</slot>
+  <slot>show_about_dialog()</slot>
  </slots>
 </ui>
