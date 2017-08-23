@@ -17,5 +17,18 @@ Usage
 -----
 ::
 
-    $ git-annex-metadata-gui [/path/to/repo]
+    usage: git-annex-metadata-gui [option ...] [repo-path]
+
+    A graphical interface for git-annex metadata.
+
+    positional arguments:
+      repo-path      path of the git-annex repository
+
+    optional arguments:
+      -h, --help     show this help message and exit
+      -v, --version  print version information and exit
+      --debug        print debug-level log messages
+      --full-load    don't load models incrementially
+
+    Also see the manual entry for qt5options(7)
 
