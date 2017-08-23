@@ -72,12 +72,12 @@ class AnnexedKeyItem(QtGui.QStandardItem):
             lhs = self.data(role=Qt.Qt.DisplayRole)
             rhs = other.data(role=Qt.Qt.DisplayRole)
 
-            lhs_pre, lhs_name = lhs.split('--')
+            lhs_pre, _, lhs_name = lhs.partition('--')
             lhs_backend, *lhs_fields = lhs_pre.split('-')
             lhs_fields = [(f[0], int(f[1:])) for f in lhs_fields]
             lhs = (lhs_backend, *lhs_fields, lhs_name)
 
-            rhs_pre, rhs_name = rhs.split('--')
+            rhs_pre, _, rhs_name = rhs.partition('--')
             rhs_backend, *rhs_fields = rhs_pre.split('-')
             rhs_fields = [(f[0], int(f[1:])) for f in rhs_fields]
             rhs = (rhs_backend, *rhs_fields, rhs_name)
