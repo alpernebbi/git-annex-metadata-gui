@@ -32,3 +32,14 @@ Usage
 
     Also see the manual entry for qt5options(7)
 
+Screenshots
+-----------
+
+.. image:: https://github.com/alpernebbi/
+    git-annex-metadata-gui/wiki/screenshots/v020s1.png
+    :alt: Workflow with a maximized window, both docks visible.
+
+See `the wiki page`_ for more screenshots.
+
+.. _the wiki page: https://github.com/alpernebbi/
+    git-annex-metadata-gui/wiki/Screenshots
